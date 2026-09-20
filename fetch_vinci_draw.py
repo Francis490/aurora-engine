@@ -3,17 +3,15 @@ fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da AGIMEG.
 
 Fonte: https://www.agimeg.it
-Pattern URL: https://www.agimeg.it/super-win-for-life-{giorno}-{mese}-{anno}-...
 Formato: ogni giorno AGIMEG pubblica un articolo con:
 - Numero concorso
 - Combinazione vincente (8 numeri)
 - Quote complete
 
-Strategia:
-1. Costruisce l'URL dell'articolo di oggi (o di una data specifica)
-2. Estrae i dati con regex dal testo dell'articolo
-3. Segue il link all'articolo precedente per recuperare lo storico
-4. Salva tutto in vinci_history.json
+FIX (2026-09-20):
+- Parser con 4 strategie a cascata per gestire formati diversi
+- Fallback su ricerca numerica ampia (blocchi di 8+ numeri)
+- Migliore gestione articoli "vincite-super-rendita" vs "estrazione-quote"
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
@@ -50,7 +48,6 @@ MESI_IT = {
     "maggio": 5, "giugno": 6, "luglio": 7, "agosto": 8,
     "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
 }
-
 MESI_IT_INV = {v: k for k, v in MESI_IT.items()}
 
 
@@ -76,58 +73,45 @@ def save_history(data):
         print(f"[!] Errore salvataggio: {e}")
 
 
-def build_search_url(data: datetime) -> str:
-    """
-    Costruisce l'URL di ricerca per una data specifica.
-    Usa il motore di ricerca interno di AGIMEG.
-    """
-    giorno = data.day
-    mese = MESI_IT_INV[data.month]
-    anno = data.year
-    return f"{BASE_URL}/?s=Super+Win+for+Life+{giorno}+{mese}+{anno}"
-
-
-def build_article_url_pattern(data: datetime) -> str:
-    """
-    Pattern URL tipico: /super-win-for-life-{giorno}-{mese}-{anno}-...
-    Non sempre esatto: il suffisso varia. Cerchiamo via search.
-    """
-    giorno = data.day
-    mese = MESI_IT_INV[data.month]
-    anno = data.year
-    return f"super-win-for-life-{giorno}-{mese}-{anno}"
-
-
 def fetch_url(url, timeout=20):
     try:
         r = requests.get(url, headers=HEADERS, timeout=timeout)
         r.raise_for_status()
         return r.text
     except Exception as e:
-        print(f"    ✗ errore fetch {url}: {e}")
+        print(f"    ✗ errore fetch: {e}")
         return None
 
 
+def build_search_url(data: datetime) -> str:
+    giorno = data.day
+    mese = MESI_IT_INV[data.month]
+    anno = data.year
+    return f"{BASE_URL}/?s=Super+Win+for+Life+{giorno}+{mese}+{anno}"
+
+
 # ==========================================
-# PARSING ARTICOLO AGIMEG
+# PARSING — 4 STRATEGIE A CASCATA
 # ==========================================
-def parse_article(html: str) -> dict:
+def parse_article(html: str, verbose: bool = True) -> dict:
     """
     Estrae i dati dell'estrazione dal testo dell'articolo AGIMEG.
-    Ritorna dict con: concorso, data, numeri, quote (opzionale).
+    Usa 4 strategie a cascata.
     """
-    # Estrai il testo principale (rimuovi tag HTML)
+    # Pulisci HTML
     text = re.sub(r"<[^>]+>", " ", html)
+    text = re.sub(r"&nbsp;", " ", text)
+    text = re.sub(r"&[a-z]+;", " ", text)
     text = re.sub(r"\s+", " ", text)
 
     result = {}
 
-    # 1. Numero concorso: "concorso n. 109" o "concorso numero 109"
+    # === CONCORSO ===
     m = re.search(r"concorso\s*n(?:\.|umero)?\s*(\d{1,4})", text, re.IGNORECASE)
     if m:
         result["concorso"] = int(m.group(1))
 
-    # 2. Data: cerca nel titolo "Super Win for Life 19 settembre 2026"
+    # === DATA ===
     m = re.search(
         r"Super Win for Life\s+(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})",
         text, re.IGNORECASE
@@ -138,7 +122,7 @@ def parse_article(html: str) -> dict:
         anno = int(m.group(3))
         result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
     else:
-        # Fallback: cerca "sabato 19 settembre" senza anno
+        # Fallback: cerca nel titolo "Super Win for Life 19 settembre"
         m = re.search(
             r"(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)",
             text, re.IGNORECASE
@@ -146,34 +130,99 @@ def parse_article(html: str) -> dict:
         if m:
             giorno = int(m.group(1))
             mese = MESI_IT[m.group(2).lower()]
-            anno = datetime.now().year
+            # Cerca anno vicino
+            anno_m = re.search(r"\b(20\d{2})\b", text)
+            anno = int(anno_m.group(1)) if anno_m else datetime.now().year
             result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
 
-    # 3. Numeri: "è: 5 – 8 – 17 – 34 – 48 – 65 – 80 – 89"
-    # Cerca 8 numeri separati da – o -
-    m = re.search(
-        r"(?:è|sono|vincita)\s*:?\s*((?:\d{1,2}\s*[–\-]\s*){7}\d{1,2})",
-        text, re.IGNORECASE
-    )
-    if m:
-        nums_str = m.group(1)
-        nums = [int(n) for n in re.findall(r"\d{1,2}", nums_str)]
-        nums = [n for n in nums if 1 <= n <= 90]
-        if len(nums) == 8:
-            result["numeri"] = nums
+    # === NUMERI — 4 strategie ===
+    numbers = None
 
-    # Fallback: cerca sequenza di 8 numeri 1-90
-    if "numeri" not in result:
-        # Cerca nel testo sequenze di 8 numeri plausibili
+    # Strategia 1: pattern esplicito "è: 5 – 8 – 17..."
+    if not numbers:
         m = re.search(
-            r"(\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2}\s*[–\-]\s*\d{1,2})",
+            r"(?:è|sono|vincente|estratti|combinazione)[\s:]*((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
+            text, re.IGNORECASE
+        )
+        if m:
+            nums = [int(n) for n in re.findall(r"\d{1,2}", m.group(1))]
+            nums = [n for n in nums if 1 <= n <= 90]
+            if len(nums) >= 8:
+                # Deduplica mantenendo ordine
+                seen = set()
+                unique = []
+                for n in nums:
+                    if n not in seen:
+                        seen.add(n)
+                        unique.append(n)
+                if len(unique) >= 8:
+                    numbers = unique[:8]
+                    if verbose:
+                        print(f"    [strategy 1] numeri trovati con contesto 'è/vincente'")
+
+    # Strategia 2: sequenza di 8+ numeri separati da – o -
+    if not numbers:
+        m = re.search(
+            r"((?:\d{1,2}\s*[–\-]\s*){7,}\d{1,2})",
             text
         )
         if m:
             nums = [int(n) for n in re.findall(r"\d{1,2}", m.group(1))]
             nums = [n for n in nums if 1 <= n <= 90]
-            if len(nums) == 8:
-                result["numeri"] = nums
+            if len(nums) >= 8:
+                seen = set()
+                unique = []
+                for n in nums:
+                    if n not in seen:
+                        seen.add(n)
+                        unique.append(n)
+                if len(unique) >= 8:
+                    numbers = unique[:8]
+                    if verbose:
+                        print(f"    [strategy 2] numeri trovati con separatore '–'")
+
+    # Strategia 3: blocco numerico esteso (numeri separati da spazi/virgole)
+    if not numbers:
+        # Cerca blocchi di 20+ numeri consecutivi 1-90
+        for m in re.finditer(r"((?:\b\d{1,2}\b[\s,·]+){15,}\b\d{1,2}\b)", text):
+            nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", m.group(1))]
+            nums = [n for n in nums if 1 <= n <= 90]
+            if len(nums) >= 8:
+                # Dedup
+                seen = set()
+                unique = []
+                for n in nums:
+                    if n not in seen:
+                        seen.add(n)
+                        unique.append(n)
+                # Prendi i primi 8 (spesso sono quelli dell'estrazione)
+                if len(unique) >= 8:
+                    numbers = unique[:8]
+                    if verbose:
+                        print(f"    [strategy 3] numeri trovati in blocco ampio")
+                    break
+
+    # Strategia 4: cerca la parola "numeri" e prendi i primi 8 numeri dopo
+    if not numbers:
+        m = re.search(r"numeri.{0,200}", text, re.IGNORECASE)
+        if m:
+            chunk = m.group(0)
+            nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", chunk)]
+            nums = [n for n in nums if 1 <= n <= 90 and n != 0]
+            # Dedup
+            seen = set()
+            unique = []
+            for n in nums:
+                if n not in seen:
+                    seen.add(n)
+                    unique.append(n)
+            if len(unique) >= 8:
+                numbers = unique[:8]
+                if verbose:
+                    print(f"    [strategy 4] numeri trovati dopo keyword 'numeri'")
+
+    if numbers:
+        result["numeri"] = numbers
 
     return result
 
@@ -182,60 +231,47 @@ def parse_article(html: str) -> dict:
 # RICERCA ARTICOLO
 # ==========================================
 def find_article_url_for_date(data: datetime) -> str:
-    """
-    Trova l'URL dell'articolo AGIMEG per una data specifica.
-    Usa la ricerca interna del sito.
-    """
-    # 1. Prova pattern diretto (a volte funziona)
-    pattern = build_article_url_pattern(data)
-    # Non possiamo sapere il suffisso, quindi usiamo la ricerca
-
-    # 2. Usa ricerca interna
     search_url = build_search_url(data)
-    print(f"[*] Ricerca articolo per {data.strftime('%d/%m/%Y')}...")
     html = fetch_url(search_url)
     if not html:
         return None
 
-    # Cerca link ad articoli "super-win-for-life-{giorno}-{mese}-{anno}"
-    pattern_link = re.compile(
-        rf'href="(https://www\.agimeg\.it/super-win-for-life-{data.day}-{MESI_IT_INV[data.month]}-{data.year}[^"]*)"',
+    data_str = f"{data.day}-{MESI_IT_INV[data.month]}-{data.year}"
+    pattern = re.compile(
+        rf'href="(https://www\.agimeg\.it/super-win-for-life-{data_str}[^"]*)"',
         re.IGNORECASE
     )
-    matches = pattern_link.findall(html)
+    matches = pattern.findall(html)
     if matches:
         return matches[0]
 
-    # Fallback: cerca link generici
-    pattern_link2 = re.compile(
+    # Fallback
+    pattern2 = re.compile(
         r'href="(https://www\.agimeg\.it/super-win-for-life-[^"]*)"',
         re.IGNORECASE
     )
-    matches2 = pattern_link2.findall(html)
-    # Filtra per data
-    data_str = f"{data.day}-{MESI_IT_INV[data.month]}-{data.year}"
-    for url in matches2:
+    for url in pattern2.findall(html):
         if data_str in url:
             return url
 
     return None
 
 
-def fetch_extraction_for_date(data: datetime) -> dict:
-    """Recupera l'estrazione di una data specifica. Ritorna None se non trovata."""
+def fetch_extraction_for_date(data: datetime, verbose: bool = True) -> dict:
     url = find_article_url_for_date(data)
     if not url:
         print(f"    ✗ Nessun articolo per {data.strftime('%d/%m/%Y')}")
         return None
 
-    print(f"    → {url}")
+    if verbose:
+        print(f"    → {url}")
     html = fetch_url(url)
     if not html:
         return None
 
-    parsed = parse_article(html)
+    parsed = parse_article(html, verbose=verbose)
     if not parsed.get("numeri"):
-        print(f"    ✗ Parsing numeri fallito")
+        print(f"    ✗ Parsing numeri fallito (4 strategie esaurite)")
         return None
 
     parsed["url"] = url
@@ -260,8 +296,7 @@ def merge_history(existing, fetched):
     return existing + new_items, len(new_items)
 
 
-def assign_progressive_concorso(history):
-    """Ordina cronologicamente e assegna numeri di concorso se mancanti."""
+def sort_chronological(history):
     def sort_key(x):
         d = x.get("data", "01/01/1900")
         try:
@@ -269,7 +304,6 @@ def assign_progressive_concorso(history):
             return (dt.year, dt.month, dt.day)
         except Exception:
             return (0, 0, 0)
-
     return sorted(history, key=sort_key)
 
 
@@ -279,13 +313,12 @@ def assign_progressive_concorso(history):
 def main():
     print("=== AURORA ENGINE — FETCH VINCI DRAW (AGIMEG) ===")
 
-    # Controlla argomenti
     backfill_days = 0
     if len(sys.argv) > 2 and sys.argv[1] == "--backfill":
         try:
             backfill_days = int(sys.argv[2])
         except ValueError:
-            print("[!] Argomento --backfill deve essere un numero intero.")
+            print("[!] --backfill richiede un numero intero.")
             sys.exit(1)
 
     history = load_history()
@@ -295,21 +328,19 @@ def main():
     today = datetime.now()
 
     if backfill_days > 0:
-        # Recupera gli ultimi N giorni (oggi incluso)
         print(f"[*] Backfill: ultimi {backfill_days} giorni")
         for i in range(backfill_days):
             data = today - timedelta(days=i)
             print(f"[*] Giorno {i+1}/{backfill_days}: {data.strftime('%d/%m/%Y')}")
-            extracted = fetch_extraction_for_date(data)
+            extracted = fetch_extraction_for_date(data, verbose=True)
             if extracted:
                 fetched.append(extracted)
                 print(f"    ✓ Concorso {extracted.get('concorso')} "
                       f"({extracted.get('data')}): {extracted['numeri']}")
-            time.sleep(2)  # rispetta il server
+            time.sleep(2)
     else:
-        # Solo oggi
-        print(f"[*] Recupero estrazione di oggi: {today.strftime('%d/%m/%Y')}")
-        extracted = fetch_extraction_for_date(today)
+        print(f"[*] Recupero oggi: {today.strftime('%d/%m/%Y')}")
+        extracted = fetch_extraction_for_date(today, verbose=True)
         if extracted:
             fetched.append(extracted)
             print(f"    ✓ Concorso {extracted.get('concorso')} "
@@ -317,14 +348,13 @@ def main():
 
     if not fetched:
         print("[!] Nessuna estrazione recuperata.")
-        # Non è un errore fatale: magari oggi non c'è ancora
         return
 
     print(f"\n[*] Recuperate {len(fetched)} estrazioni")
 
     merged, added = merge_history(history, fetched)
     if added > 0:
-        merged = assign_progressive_concorso(merged)
+        merged = sort_chronological(merged)
         save_history(merged)
         print(f"[+] Aggiunte {added} nuove estrazioni. Totale: {len(merged)}")
     else:
