@@ -1,0 +1,84 @@
+name: Aurora Engine — Daily Sync
+
+on:
+  schedule:
+    # Ogni giorno alle 22:00 italiane (20:00 UTC in estate, 21:00 UTC in inverno)
+    # Super Win for Life estrae alle 20:00 italiane, risultati online entro ~21:00
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Forza esecuzione anche se ci sono errori nel fetch'
+        required: false
+        default: 'true'
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: aurora-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-aurora:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MPLBACKEND: Agg
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch estrazione da AGIMEG
+        run: python fetch_vinci_draw.py
+        continue-on-error: true
+
+      - name: Esecuzione Aurora Engine + Report Telegram
+        run: python vinci_vita_telegram.py
+
+      - name: Salvataggio automatico su GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          for file in vinci_history.json vinci_database.json vinci_played.json vinci_bankroll.json backtest_report.txt backtest_results.json; do
+            if [ -f "$file" ]; then
+              git add "$file"
+            fi
+          done
+
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica da salvare."
+          else
+            git commit -m "Aurora sync: $(date +'%Y-%m-%d') [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload artifact log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurora-logs-${{ github.run_number }}
+          path: |
+            vinci_database.json
+            backtest_report.txt
+          retention-days: 30
+          if-no-files-found: ignore
