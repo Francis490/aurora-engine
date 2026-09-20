@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated_at": "2026-09-20T16:32:40",
+  "updated_at": "2026-09-20T16:54:34",
   "rendita_mensile": 13810,
   "valore_attuale_rendita": 2729878.42,
   "budget_mode": {
@@ -17,22 +17,22 @@
       "id": 1,
       "numeri": [
         3,
-        4,
-        49,
-        56,
-        61,
-        67
+        5,
+        35,
+        60,
+        67,
+        70
       ],
       "somma": 240,
       "in_range": true,
-      "composite_score": 0.4237,
-      "anti_crowd_score": 6.2,
+      "composite_score": 0.4942,
+      "anti_crowd_score": 5.7,
       "fingerprint_detail": {
-        "composite": 0.2274,
-        "transition": 0.0412,
-        "cooccurrence": 0.0222,
-        "gap_pattern": 0.5128,
-        "hot_cold": 0.3333
+        "composite": 0.4184,
+        "transition": 0.0121,
+        "cooccurrence": 0.0063,
+        "gap_pattern": 0.6552,
+        "hot_cold": 1.0
       }
     }
   ],
@@ -60,18 +60,21 @@
     "ora": "20:00"
   },
   "fingerprint_base": {
-    "n_draws": 6,
-    "sum_mean": 257.38
+    "n_draws": 21,
+    "sum_mean": 285.61
   },
   "portfolio_metrics": {
-    "composite": 0.6119,
-    "individual": 0.4237,
+    "composite": 0.6471,
+    "individual": 0.4942,
     "coverage": 1.0,
     "correlation": 0.0,
     "diversity": 1.0,
     "n_sestine": 1
   },
-  "regime_report": null,
+  "regime_report": {
+    "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
+    "n": 21
+  },
   "bankroll_state": {
     "initial_bankroll": 100.0,
     "bankroll": 100.0,
