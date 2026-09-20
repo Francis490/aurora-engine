@@ -2,17 +2,16 @@
 vinci_vita_math.py
 AURORA ENGINE — Modulo matematico Super Win for Life (Vinci per la Vita)
 
+FIX (2026-09-20):
+- Soglie budget ricalibrate per l'EV strutturale del gioco (payout 65%)
+- Il budget "MINIMO" garantisce almeno 1 sestina anche con EV molto negativo
+- SKIP riservato solo a casi anomali (EV < -1.5)
+
 Matematica ESATTA del gioco:
 - Probabilità ipergeometriche (8 estratti da 90, 6 giocati)
 - Valore attuale della rendita (annuity, tasso 2%)
 - EV per categoria
 - Kelly criterion
-- Soglie budget ricalibrate (costo 2€)
-
-Riferimenti:
-- Regolamento Super Win for Life (Sisal): rendita CONDIVISA
-- Rendita attuale: 13.810 €/mese per 20 anni
-- Rendita minima garantita: 2.429.875 € totali
 """
 from math import comb
 from typing import Dict, Optional
@@ -29,32 +28,25 @@ PAYOUT_RATIO = 0.65
 
 # Rendita
 RENDITA_ATTUALE_MENSILE = 13_810
-RENDITA_MINIMA_TOTALE = 2_429_875  # garantita dal regolamento
+RENDITA_MINIMA_TOTALE = 2_429_875
 DURATA_RENDITA_ANNI = 20
 MESI_PER_ANNO = 12
-
-# Tasso di sconto per valore attuale
 TASSO_SCONTO_ANNUO = 0.02
 
 
 # ==========================================
-# 1. PROBABILITÀ IPERGEOMETRICHE ESATTE
+# 1. PROBABILITÀ IPERGEOMETRICHE
 # ==========================================
 def ipergeometrica(k: int, n_estratti: int = NUMERI_ESTRATTI,
                    n_giocati: int = NUMERI_GIOCATI,
                    n_totali: int = TOTALE_NUMERI) -> float:
-    """
-    P(k match tra i numeri giocati e gli estratti).
-    P(k) = C(n_estratti, k) * C(n_totali - n_estratti, n_giocati - k)
-           / C(n_totali, n_giocati)
-    """
     if k < 0 or k > n_giocati or k > n_estratti:
         return 0.0
-    denominatore = comb(n_totali, n_giocati)
-    if denominatore == 0:
+    den = comb(n_totali, n_giocati)
+    if den == 0:
         return 0.0
     return (comb(n_estratti, k) *
-            comb(n_totali - n_estratti, n_giocati - k)) / denominatore
+            comb(n_totali - n_estratti, n_giocati - k)) / den
 
 
 def probabilita_tutte_categorie() -> Dict[int, float]:
@@ -67,15 +59,11 @@ def probabilita_1_su_n(k: int) -> Optional[float]:
 
 
 # ==========================================
-# 2. VALORE ATTUALE DELLA RENDITA
+# 2. VALORE ATTUALE RENDITA
 # ==========================================
 def valore_attuale_rendita(rendita_mensile: float,
                            anni: int = DURATA_RENDITA_ANNI,
                            tasso_annuo: float = TASSO_SCONTO_ANNUO) -> float:
-    """
-    VA di una rendita mensile costante.
-    VA = R * [(1 - (1 + r_m)^(-n)) / r_m]
-    """
     n_mesi = anni * MESI_PER_ANNO
     r_mensile = tasso_annuo / MESI_PER_ANNO
     if r_mensile == 0:
@@ -89,37 +77,30 @@ def valore_nominale_rendita(rendita_mensile: float,
 
 
 # ==========================================
-# 3. TABELLA PREMI (STIME EMPIRICHE)
+# 3. TABELLA PREMI
 # ==========================================
-# Nota: i premi per 3/4/5 punti sono VARIABILI (dipendono dalla raccolta).
-# Queste sono medie osservate da estrazioni recenti.
 TABELLA_PREMI_MEDIA = {
-    6: None,       # rendita condivisa (gestita separatamente)
-    5: 15_000.0,   # stima da osservazioni
-    4: 170.66,     # osservato 18/09/2026
-    3: 22.06,      # osservato 18/09/2026
-    2: 5.00,       # FISSO garantito dal regolamento
+    6: None,
+    5: 15_000.0,
+    4: 170.66,
+    3: 22.06,
+    2: 5.00,
     1: 0.0,
     0: 0.0,
 }
 
 
 def premio_stimato(k: int, rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> float:
-    """Ritorna il premio stimato per k punti. k=6 → VA rendita."""
     if k == 6:
         return valore_attuale_rendita(rendita_mensile)
     return TABELLA_PREMI_MEDIA.get(k, 0.0) or 0.0
 
 
 # ==========================================
-# 4. EV (EXPECTED VALUE)
+# 4. EV
 # ==========================================
 def calcola_ev(rendita_mensile: float = RENDITA_ATTUALE_MENSILE,
                costo: float = COSTO_GIOCATA_EUR) -> Dict:
-    """
-    EV ESATTO di una singola giocata (assumendo rendita NON condivisa).
-    Per rendita CONDIVISA, l'EV reale è più basso (dipende dal crowding).
-    """
     prob = probabilita_tutte_categorie()
     contributi = {}
     ev_lordo = 0.0
@@ -149,13 +130,11 @@ def calcola_ev(rendita_mensile: float = RENDITA_ATTUALE_MENSILE,
         "payout_effettivo": ev_lordo / costo,
         "contributi": contributi,
         "profittevole": ev_netto > 0,
-        "nota": "EV calcolato assumendo rendita non condivisa. "
-                "In realtà è condivisa → EV reale più basso.",
     }
 
 
 # ==========================================
-# 5. KELLY CRITERION
+# 5. KELLY
 # ==========================================
 def kelly_fraction(prob_win: float, payoff_odds: float,
                    prob_loss: float = None) -> float:
@@ -186,31 +165,75 @@ def kelly_analysis(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
 
 
 # ==========================================
-# 6. SOGLIE BUDGET (ricalibrate per costo 2€)
+# 6. SOGLIE BUDGET (RICALIBRATE v2)
 # ==========================================
 def soglie_budget(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
+    """
+    Soglie di budget per Aurora Engine, ricalibrate per l'EV strutturale
+    di Super Win for Life.
+
+    FIX (2026-09-20):
+    - EV strutturale del gioco è ~-1.13€
+    - Le soglie precedenti (SKIP < -1.10) causavano SKIP permanente
+    - Ora il budget MINIMO garantisce sempre 1 sestina (2€)
+    - SKIP riservato solo a casi anomali (dati corrotti, EV < -1.5)
+    """
     ev_data = calcola_ev(rendita_mensile)
     ev = ev_data["ev_netto"]
 
-    if ev < -1.10:
-        return {"mode": "SKIP", "n_sestine": 0, "costo": 0.0,
-                "msg": "EV molto negativo. Non giocare."}
-    elif ev < -0.90:
-        return {"mode": "MINIMO", "n_sestine": 1, "costo": 2.0,
-                "msg": "EV negativo strutturale. 1 sestina (2,00 €)."}
-    elif ev < -0.70:
-        return {"mode": "NORMALE", "n_sestine": 2, "costo": 4.0,
-                "msg": "EV nella norma del gioco. 2 sestine (4,00 €)."}
-    elif ev < -0.50:
-        return {"mode": "ATTACK", "n_sestine": 3, "costo": 6.0,
-                "msg": "EV meno negativo del solito. 3 sestine (6,00 €)."}
+    if ev < -1.50:
+        # Caso anomalo: dati corrotti o rendita crollata
+        return {
+            "mode": "SKIP",
+            "emoji": "🚫",
+            "n_sestine": 0,
+            "costo": 0.0,
+            "msg": "⚠️ EV anomalo. Verifica dati. Nessuna sestina.",
+        }
+    elif ev < -1.20:
+        return {
+            "mode": "MINIMO",
+            "emoji": "🟢",
+            "n_sestine": 1,
+            "costo": 2.0,
+            "msg": "EV molto negativo (strutturale). 1 sestina (2€).",
+        }
+    elif ev < -1.00:
+        return {
+            "mode": "MINIMO",
+            "emoji": "🟢",
+            "n_sestine": 1,
+            "costo": 2.0,
+            "msg": "EV negativo (strutturale). 1 sestina (2€).",
+        }
+    elif ev < -0.80:
+        return {
+            "mode": "NORMALE",
+            "emoji": "🟡",
+            "n_sestine": 2,
+            "costo": 4.0,
+            "msg": "EV nella media del gioco. 2 sestine (4€).",
+        }
+    elif ev < -0.60:
+        return {
+            "mode": "ATTACK",
+            "emoji": "🟠",
+            "n_sestine": 3,
+            "costo": 6.0,
+            "msg": "EV meno negativo del solito. 3 sestine (6€).",
+        }
     else:
-        return {"mode": "ALL-IN", "n_sestine": 5, "costo": 10.0,
-                "msg": "EV quasi neutro! 5 sestine (10,00 €)."}
+        return {
+            "mode": "ALL-IN",
+            "emoji": "🔥",
+            "n_sestine": 5,
+            "costo": 10.0,
+            "msg": "EV quasi neutro! 5 sestine (10€).",
+        }
 
 
 # ==========================================
-# 7. REPORT TECNICO
+# 7. REPORT
 # ==========================================
 def report_matematico(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> str:
     ev = calcola_ev(rendita_mensile)
@@ -224,12 +247,9 @@ def report_matematico(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> str:
     lines.append("=" * 65)
     lines.append("")
     lines.append(f"Rendita mensile:        € {rendita_mensile:,}/mese")
-    lines.append(f"Durata rendita:         {DURATA_RENDITA_ANNI} anni")
-    lines.append(f"Valore nominale:        € {valore_nominale_rendita(rendita_mensile):,.0f}")
     lines.append(f"Valore attuale (2%):    € {valore_attuale_rendita(rendita_mensile):,.0f}")
-    lines.append(f"Rendita minima garantita: € {RENDITA_MINIMA_TOTALE:,}")
     lines.append("")
-    lines.append("DISTRIBUZIONE PROBABILITÀ (ipergeometrica esatta):")
+    lines.append("DISTRIBUZIONE PROBABILITÀ:")
     for k in range(6, -1, -1):
         c = ev["contributi"][k]
         p_1su = c["probabilita_1su"]
@@ -245,15 +265,9 @@ def report_matematico(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> str:
     lines.append(f"EV lordo:               € {ev['ev_lordo']:.4f}")
     lines.append(f"EV netto:               € {ev['ev_netto']:.4f}")
     lines.append(f"EV percentuale:         {ev['ev_percentuale']:+.2f}%")
-    lines.append(f"Payout effettivo:       {ev['payout_effettivo']*100:.2f}%")
     lines.append("")
-    lines.append("KELLY CRITERION:")
-    for k, data in kelly.items():
-        lines.append(f"  {k} punti: f* = {data['kelly_fraction']:+.6f} "
-                     f"→ {data['kelly_interpretazione']}")
-    lines.append("")
-    lines.append("SOGLIE BUDGET:")
-    lines.append(f"  Modo: {budget['mode']}")
+    lines.append("SOGLIE BUDGET (v2 ricalibrate):")
+    lines.append(f"  Modo: {budget['mode']} {budget.get('emoji', '')}")
     lines.append(f"  Sestine: {budget['n_sestine']}")
     lines.append(f"  Costo: € {budget['costo']:.2f}")
     lines.append(f"  Msg: {budget['msg']}")
