@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated_at": "2026-09-20T16:54:34",
+  "updated_at": "2026-09-20T17:47:37",
   "rendita_mensile": 13810,
   "valore_attuale_rendita": 2729878.42,
   "budget_mode": {
@@ -16,22 +16,22 @@
     {
       "id": 1,
       "numeri": [
-        3,
-        5,
-        35,
+        11,
+        33,
+        52,
         60,
         67,
-        70
+        85
       ],
-      "somma": 240,
+      "somma": 308,
       "in_range": true,
-      "composite_score": 0.4942,
-      "anti_crowd_score": 5.7,
+      "composite_score": 0.5346,
+      "anti_crowd_score": 6.55,
       "fingerprint_detail": {
-        "composite": 0.4184,
-        "transition": 0.0121,
-        "cooccurrence": 0.0063,
-        "gap_pattern": 0.6552,
+        "composite": 0.4141,
+        "transition": 0.0163,
+        "cooccurrence": 0.0032,
+        "gap_pattern": 0.6371,
         "hot_cold": 1.0
       }
     }
@@ -64,8 +64,8 @@
     "sum_mean": 285.61
   },
   "portfolio_metrics": {
-    "composite": 0.6471,
-    "individual": 0.4942,
+    "composite": 0.6673,
+    "individual": 0.5346,
     "coverage": 1.0,
     "correlation": 0.0,
     "diversity": 1.0,
