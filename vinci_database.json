@@ -1,0 +1,56 @@
+{
+  "version": "2.0",
+  "updated_at": "2026-09-20T16:11:22",
+  "rendita_mensile": 13810,
+  "valore_attuale_rendita": 2729878.42,
+  "budget_mode": {
+    "mode": "SKIP",
+    "n_sestine": 0,
+    "costo": 0.0,
+    "msg": "EV molto negativo. Non giocare."
+  },
+  "n_sestinas": 0,
+  "costo_totale": 0.0,
+  "sestinas": [],
+  "ev": {
+    "ev_netto": -1.1339,
+    "ev_percentuale": -56.69
+  },
+  "last_draw": {
+    "concorso": 109,
+    "data": "19/09/2026",
+    "numeri": [
+      5,
+      8,
+      17,
+      34,
+      48,
+      65,
+      80,
+      89
+    ]
+  },
+  "next_draw": {
+    "concorso": 110,
+    "data": "20/09/2026",
+    "ora": "20:00"
+  },
+  "fingerprint_base": null,
+  "portfolio_metrics": null,
+  "regime_report": null,
+  "bankroll_state": {
+    "initial_bankroll": 100.0,
+    "bankroll": 100.0,
+    "peak": 100.0,
+    "drawdown_pct": 0.0,
+    "total_wagered": 0.0,
+    "total_won": 0.0,
+    "balance": 0.0,
+    "n_plays": 0,
+    "n_wins": 0,
+    "win_rate_pct": 0.0,
+    "roi_pct": 0.0,
+    "is_stopped": false,
+    "stop_until": null
+  }
+}
