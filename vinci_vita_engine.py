@@ -7,9 +7,13 @@ Pipeline:
 2. Regime detection
 3. Bankroll state
 4. EV/Kelly/budget
-5. Pool + generator
-6. Fingerprint avanzati + portfolio
+5. Pool (FIX: esclude < 10) + generator
+6. Fingerprint avanzati + portfolio (FIX: filtro AC >= 7.0)
 7. Output database + report
+
+FIX (2026-09-20):
+- build_pool_from_history: esclude numeri < 10 (troppo popolari)
+- run_engine: filtro AC minimo 7.0 sulle sestine candidate
 """
 import json
 import os
@@ -53,6 +57,9 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
+# FIX: soglia anti-crowd minima
+AC_MIN_THRESHOLD = 7.0
+
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -73,9 +80,17 @@ def save_json(fp, data):
         print(f"[!] Errore salvataggio: {e}")
 
 
-def build_pool(history, size=25):
+def build_pool_from_history(history, size=25):
+    """
+    Costruisce pool di 'size' numeri bilanciando frequenza media + anti-crowd.
+
+    FIX (2026-09-20):
+    - Esclude numeri < 10 (troppo popolari in Italia: compleanni, cifre singole)
+    - Forza almeno 6 numeri > 60 (anti-crowd forte)
+    """
     if not history:
-        return list(range(1, 91, 4))[:size]
+        return [n for n in range(10, 91, 4)][:size]
+
     freq = {i: 0 for i in range(1, 91)}
     td = 0
     for d in history:
@@ -86,17 +101,27 @@ def build_pool(history, size=25):
         for n in nums:
             if 1 <= n <= 90:
                 freq[n] += 1
+
     if td == 0:
-        return list(range(1, 91, 4))[:size]
+        return [n for n in range(10, 91, 4)][:size]
+
     avg = sum(freq.values()) / 90
-    scored = sorted(range(1, 91), key=lambda n: abs(freq[n] - avg))
+
+    # FIX: escludi numeri < 10
+    candidates = list(range(10, 91))
+
+    # Ordina per distanza dalla media
+    scored = sorted(candidates, key=lambda n: abs(freq[n] - avg))
     pool = scored[:size]
+
+    # Forza almeno 6 numeri > 60 (anti-crowd forte)
     anti = [n for n in range(61, 91) if n not in pool]
     anti.sort(key=lambda n: abs(freq[n] - avg))
-    for n in anti[:5]:
+    for n in anti[:6]:
         if len(pool) >= size:
             pool.pop()
         pool.append(n)
+
     return sorted(set(pool))
 
 
@@ -149,7 +174,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         return payload
 
     # Pool + Generator
-    pool = build_pool(history, 25)
+    pool = build_pool_from_history(history, 25)
     print(f"[*] Pool: {pool}")
     n_cand = min(50, max(20, n_sestinas * 10))
     cand, fp = generate_aurora_sestinas(history, pool, n_sestinas=n_cand)
@@ -169,10 +194,14 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         except Exception as e:
             print(f"[!] FP avanzati errore: {e}")
 
-    # Score candidati
+    # FIX: Score candidati con filtro AC >= 7.0
     scored = []
+    rejected = 0
     for s in cand:
         base = anti_crowd_score(s)
+        if base < AC_MIN_THRESHOLD:
+            rejected += 1
+            continue
         adv = 0.5
         if fp_eng:
             try:
@@ -182,8 +211,27 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         comp = 0.5 * (base / 10.0) + 0.5 * adv
         scored.append((s, comp))
 
+    if rejected > 0:
+        print(f"[*] Filtro AC: {rejected} sestine scartate (AC < {AC_MIN_THRESHOLD})")
+
+    # Fallback: se il filtro elimina tutto, rilascia
+    if not scored:
+        print(f"[!] Nessuna sestina con AC >= {AC_MIN_THRESHOLD}. Rilascio filtro.")
+        for s in cand:
+            base = anti_crowd_score(s)
+            adv = 0.5
+            if fp_eng:
+                try:
+                    adv = fp_eng.score_sestina(s)["composite"]
+                except Exception:
+                    pass
+            comp = 0.5 * (base / 10.0) + 0.5 * adv
+            scored.append((s, comp))
+
+    print(f"[*] Candidati validi dopo filtro: {len(scored)}")
+
     # Portfolio
-    if PORTF:
+    if PORTF and len(scored) > 0:
         try:
             opt = PortfolioOptimizer(scored)
             portfolio = opt.optimize(n_sestinas=n_sestinas, verbose=False)
@@ -217,7 +265,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
             "anti_crowd_score": round(ac, 2),
             "fingerprint_detail": fpd,
         })
-        print(f"  {i}. {s} | somma {ssum} | AC {ac:.2f}")
+        print(f"  {i}. {s} | somma {ssum} | AC {ac:.2f} | score {sc:.4f}")
 
     payload = build_payload(history, sdata, budget, rendita, ev, fp,
                             pmetrics, regime, bs)
