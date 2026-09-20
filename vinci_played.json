@@ -1,0 +1,22 @@
+{
+  "note": "Registro delle sestine giocate con Aurora Engine.",
+  "played": [
+    {
+      "concorso": 110,
+      "data": "20/09/2026",
+      "giocata_il": "20/09/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          3,
+          4,
+          49,
+          56,
+          61,
+          67
+        ]
+      ],
+      "note": "Aurora Engine v2 — 1 sestine"
+    }
+  ]
+}

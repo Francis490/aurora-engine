@@ -1,17 +1,41 @@
 {
   "version": "2.0",
-  "updated_at": "2026-09-20T16:11:22",
+  "updated_at": "2026-09-20T16:32:40",
   "rendita_mensile": 13810,
   "valore_attuale_rendita": 2729878.42,
   "budget_mode": {
-    "mode": "SKIP",
-    "n_sestine": 0,
-    "costo": 0.0,
-    "msg": "EV molto negativo. Non giocare."
+    "mode": "MINIMO",
+    "emoji": "🟢",
+    "n_sestine": 1,
+    "costo": 2.0,
+    "msg": "EV negativo (strutturale). 1 sestina (2€)."
   },
-  "n_sestinas": 0,
-  "costo_totale": 0.0,
-  "sestinas": [],
+  "n_sestinas": 1,
+  "costo_totale": 2.0,
+  "sestinas": [
+    {
+      "id": 1,
+      "numeri": [
+        3,
+        4,
+        49,
+        56,
+        61,
+        67
+      ],
+      "somma": 240,
+      "in_range": true,
+      "composite_score": 0.4237,
+      "anti_crowd_score": 6.2,
+      "fingerprint_detail": {
+        "composite": 0.2274,
+        "transition": 0.0412,
+        "cooccurrence": 0.0222,
+        "gap_pattern": 0.5128,
+        "hot_cold": 0.3333
+      }
+    }
+  ],
   "ev": {
     "ev_netto": -1.1339,
     "ev_percentuale": -56.69
@@ -35,8 +59,18 @@
     "data": "20/09/2026",
     "ora": "20:00"
   },
-  "fingerprint_base": null,
-  "portfolio_metrics": null,
+  "fingerprint_base": {
+    "n_draws": 6,
+    "sum_mean": 257.38
+  },
+  "portfolio_metrics": {
+    "composite": 0.6119,
+    "individual": 0.4237,
+    "coverage": 1.0,
+    "correlation": 0.0,
+    "diversity": 1.0,
+    "n_sestine": 1
+  },
   "regime_report": null,
   "bankroll_state": {
     "initial_bankroll": 100.0,
