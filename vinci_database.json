@@ -1,6 +1,6 @@
 {
-  "version": "2.0",
-  "updated_at": "2026-09-21T08:53:43",
+  "version": "3.0",
+  "updated_at": "2026-09-21T20:14:43",
   "rendita_mensile": 13810,
   "valore_attuale_rendita": 2729878.42,
   "budget_mode": {
@@ -25,8 +25,10 @@
       ],
       "somma": 269,
       "in_range": true,
-      "composite_score": 0.5248,
-      "anti_crowd_score": 6.2,
+      "composite_score": 0.7719,
+      "anti_crowd_score": 10.0,
+      "crowd_index": 0.7333,
+      "expected_share_eur": 2729878.0,
       "fingerprint_detail": {
         "composite": 0.4297,
         "transition": 0.0161,
@@ -64,8 +66,8 @@
     "sum_mean": 286.09
   },
   "portfolio_metrics": {
-    "composite": 0.6624,
-    "individual": 0.5248,
+    "composite": 0.7859,
+    "individual": 0.7719,
     "coverage": 1.0,
     "correlation": 0.0,
     "diversity": 1.0,
