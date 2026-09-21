@@ -5,12 +5,43 @@
       "concorso": 110,
       "data": "20/09/2026",
       "giocata_il": "20/09/2026",
-      "costo_eur": 4.00,
+      "costo_eur": 4.0,
       "sestine": [
-        [5, 22, 30, 34, 65, 84],
-        [3, 5, 35, 60, 67, 70]
+        [
+          5,
+          22,
+          30,
+          34,
+          65,
+          84
+        ],
+        [
+          3,
+          5,
+          35,
+          60,
+          67,
+          70
+        ]
       ],
       "note": "Concorso 110 — 2 sestine (Venus + Aurora pre-fix)"
+    },
+    {
+      "concorso": 111,
+      "data": "21/09/2026",
+      "giocata_il": "21/09/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          11,
+          16,
+          48,
+          59,
+          67,
+          68
+        ]
+      ],
+      "note": "Aurora Engine v2 — 1 sestine"
     }
   ]
 }

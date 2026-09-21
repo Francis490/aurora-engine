@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated_at": "2026-09-20T20:13:47",
+  "updated_at": "2026-09-21T08:16:41",
   "rendita_mensile": 13810,
   "valore_attuale_rendita": 2729878.42,
   "budget_mode": {
@@ -16,22 +16,22 @@
     {
       "id": 1,
       "numeri": [
-        20,
-        33,
-        56,
+        11,
+        16,
+        48,
         59,
-        61,
-        67
+        67,
+        68
       ],
-      "somma": 296,
+      "somma": 269,
       "in_range": true,
-      "composite_score": 0.5353,
-      "anti_crowd_score": 6.55,
+      "composite_score": 0.5248,
+      "anti_crowd_score": 6.2,
       "fingerprint_detail": {
-        "composite": 0.4155,
-        "transition": 0.0106,
-        "cooccurrence": 0.0127,
-        "gap_pattern": 0.6385,
+        "composite": 0.4297,
+        "transition": 0.0161,
+        "cooccurrence": 0.0023,
+        "gap_pattern": 0.7003,
         "hot_cold": 1.0
       }
     }
@@ -41,31 +41,31 @@
     "ev_percentuale": -56.69
   },
   "last_draw": {
-    "concorso": 109,
-    "data": "19/09/2026",
+    "concorso": 110,
+    "data": "20/09/2026",
     "numeri": [
-      5,
-      8,
-      17,
-      34,
-      48,
-      65,
-      80,
-      89
+      7,
+      9,
+      28,
+      63,
+      71,
+      74,
+      76,
+      82
     ]
   },
   "next_draw": {
-    "concorso": 110,
-    "data": "20/09/2026",
+    "concorso": 111,
+    "data": "21/09/2026",
     "ora": "20:00"
   },
   "fingerprint_base": {
-    "n_draws": 21,
-    "sum_mean": 285.61
+    "n_draws": 29,
+    "sum_mean": 286.09
   },
   "portfolio_metrics": {
-    "composite": 0.6676,
-    "individual": 0.5353,
+    "composite": 0.6624,
+    "individual": 0.5248,
     "coverage": 1.0,
     "correlation": 0.0,
     "diversity": 1.0,
@@ -73,7 +73,7 @@
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 21
+    "n": 29
   },
   "bankroll_state": {
     "initial_bankroll": 100.0,
