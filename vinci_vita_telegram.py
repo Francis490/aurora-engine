@@ -1,9 +1,14 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v2 — Bot Telegram sender.
+AURORA ENGINE v3 — Bot Telegram sender.
 
-Esegue l'engine, formatta il report e lo invia su Telegram.
+Esegue l'engine v3, formatta il report e lo invia su Telegram.
 Registra le giocate in vinci_played.json per il tracking.
+
+FIX (2026-09-22):
+- Titolo report: "AURORA ENGINE v3"
+- Aggiunto "Share €X" nella riga sestina (da expected_share_eur)
+- Footer aggiornato a v3
 
 Uso:
     python vinci_vita_telegram.py            # esegue engine + invia report
@@ -63,9 +68,7 @@ def send_telegram_message(text, parse_mode="HTML"):
 
 
 def send_telegram_report_smart(text):
-    """
-    Invia il report. Se > soglia, splitta in 2 messaggi a doppio newline.
-    """
+    """Invia il report. Se > soglia, splitta in 2 messaggi."""
     if len(text) <= TELEGRAM_SPLIT_THRESHOLD:
         return send_telegram_message(text)
 
@@ -108,9 +111,7 @@ def save_played(data):
 
 
 def record_play_in_file(payload):
-    """
-    Registra la giocata corrente in vinci_played.json.
-    """
+    """Registra la giocata corrente in vinci_played.json."""
     played = load_played()
     sestinas = payload.get("sestinas", [])
     if not sestinas:
@@ -121,7 +122,6 @@ def record_play_in_file(payload):
     data = next_draw.get("data")
     costo = payload.get("costo_totale", 0.0)
 
-    # Evita duplicati
     for p in played["played"]:
         if p.get("concorso") == concorso:
             p["sestine"] = [s["numeri"] for s in sestinas]
@@ -137,7 +137,7 @@ def record_play_in_file(payload):
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v2 — {len(sestinas)} sestine",
+        "note": f"Aurora Engine v3 — {len(sestinas)} sestine",
     })
 
     save_played(played)
@@ -153,7 +153,7 @@ def format_telegram_report(payload):
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v2</b>")
+    lines.append("🌅 <b>AURORA ENGINE v3</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
@@ -209,7 +209,7 @@ def format_telegram_report(payload):
                      f"({ev['ev_percentuale']:+.2f}%)")
         lines.append("")
 
-    # Sestine
+    # Sestine (con share)
     sestinas = payload.get("sestinas", [])
     if sestinas:
         costo = payload.get("costo_totale", 0)
@@ -219,8 +219,21 @@ def format_telegram_report(payload):
             e = emojis[i] if i < len(emojis) else f"{i+1}."
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   {e} <code>[{ns}]</code>")
-            lines.append(f"      Somma {s['somma']} · AC {s['anti_crowd_score']:.2f} "
-                         f"· score {s['composite_score']:.3f}")
+
+            # Riga metriche
+            metric_parts = [
+                f"Somma {s['somma']}",
+                f"ACv3 {s['anti_crowd_score']:.2f}",
+            ]
+
+            # FIX: aggiungi share se presente
+            share = s.get("expected_share_eur")
+            if share is not None:
+                metric_parts.append(f"Share €{share:,.0f}")
+
+            metric_parts.append(f"score {s.get('composite_score', 0):.3f}")
+
+            lines.append("      " + " · ".join(metric_parts))
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b> — Nessuna sestina")
@@ -234,7 +247,7 @@ def format_telegram_report(payload):
                      f"diversity {pm['diversity']:.3f}")
         lines.append("")
 
-    lines.append("🌅 <i>Aurora Engine v2 — Super Win for Life</i>")
+    lines.append("🌅 <i>Aurora Engine v3 — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     return "\n".join(lines)
@@ -252,7 +265,7 @@ def main():
                         help="Invia solo un messaggio di test")
     args = parser.parse_args()
 
-    # Modalità test: invia un messaggio semplice
+    # Modalità test
     if args.test:
         msg = ("🌅 <b>Aurora Engine — TEST</b>\n"
                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -261,9 +274,8 @@ def main():
         send_telegram_message(msg)
         return
 
-    # Esegui engine
     print("=" * 65)
-    print("AURORA ENGINE v2 — TELEGRAM DISPATCH")
+    print("AURORA ENGINE v3 — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
