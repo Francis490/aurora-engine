@@ -8,12 +8,12 @@ Pipeline:
 3. Bankroll state
 4. EV/Kelly/budget
 5. Pool (FIX: esclude < 10) + generator
-6. Fingerprint avanzati + portfolio (FIX: filtro AC >= 6.5)
+6. Fingerprint avanzati + portfolio (FIX: filtro AC >= 6.0)
 7. Output database + report
 
-FIX (2026-09-20):
+FIX (2026-09-21):
+- AC_MIN_THRESHOLD: 6.5 → 6.0 (più flessibile con pool attuale)
 - build_pool_from_history: esclude numeri < 10 (troppo popolari)
-- run_engine: filtro AC minimo 6.5 (realistico con i fingerprint attuali)
 - run_engine: 100-200 candidati generati (5-10x più scelta)
 """
 import json
@@ -59,7 +59,7 @@ HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
 # FIX: soglia anti-crowd minima (realistica con i fingerprint attuali)
-AC_MIN_THRESHOLD = 6.5
+AC_MIN_THRESHOLD = 6.0
 
 
 def load_history():
@@ -198,7 +198,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         except Exception as e:
             print(f"[!] FP avanzati errore: {e}")
 
-    # FIX: Score candidati con filtro AC >= 6.5
+    # FIX: Score candidati con filtro AC >= 6.0
     scored = []
     rejected = 0
     for s in cand:
