@@ -1,20 +1,20 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v2 — Orchestratore integrato.
+AURORA ENGINE v3 — Orchestratore integrato.
 
 Pipeline:
 1. Load storico
 2. Regime detection
 3. Bankroll state
 4. EV/Kelly/budget
-5. Pool (FIX: esclude < 10) + generator
-6. Fingerprint avanzati + portfolio (FIX: filtro AC >= 6.0)
+5. Pool (esclude < 10) + generator
+6. Fingerprint avanzati + portfolio (filtro AC v3 >= 8.0)
 7. Output database + report
 
 FIX (2026-09-21):
-- AC_MIN_THRESHOLD: 6.5 → 6.0 (più flessibile con pool attuale)
-- build_pool_from_history: esclude numeri < 10 (troppo popolari)
-- run_engine: 100-200 candidati generati (5-10x più scelta)
+- Integrato CrowdModel (anti-crowd bayesiano dinamico)
+- AC_MIN_THRESHOLD: 6.5 → 8.0 (scala v3)
+- Report mostra share atteso pro capite in caso di 6 punti
 """
 import json
 import os
@@ -27,8 +27,17 @@ from vinci_vita_math import (
 )
 from vinci_vita_generator import (
     generate_aurora_sestinas, extract_fingerprints,
-    anti_crowd_score, SUM_HARD_MIN, SUM_HARD_MAX,
+    anti_crowd_score as anti_crowd_score_v1,  # fallback
+    SUM_HARD_MIN, SUM_HARD_MAX,
 )
+
+# FIX: nuovo modulo crowd v3
+try:
+    from vinci_vita_crowd import CrowdModel
+    CROWD_V3 = True
+except ImportError:
+    CROWD_V3 = False
+    print("[!] vinci_vita_crowd non disponibile, uso anti-crowd v1")
 
 try:
     from vinci_vita_fingerprints import AuroraFingerprintEngine
@@ -58,8 +67,8 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
-# FIX: soglia anti-crowd minima (realistica con i fingerprint attuali)
-AC_MIN_THRESHOLD = 6.0
+# FIX v3: soglia su scala anti_crowd_score_v3 (range 0.1-10)
+AC_MIN_THRESHOLD = 8.0
 
 
 def load_history():
@@ -83,11 +92,7 @@ def save_json(fp, data):
 
 def build_pool_from_history(history, size=25):
     """
-    Costruisce pool di 'size' numeri bilanciando frequenza media + anti-crowd.
-
-    FIX (2026-09-20):
-    - Esclude numeri < 10 (troppo popolari in Italia: compleanni, cifre singole)
-    - Forza almeno 6 numeri > 60 (anti-crowd forte)
+    Pool builder: esclude numeri < 10, forza 6 numeri > 60.
     """
     if not history:
         return [n for n in range(10, 91, 4)][:size]
@@ -107,15 +112,10 @@ def build_pool_from_history(history, size=25):
         return [n for n in range(10, 91, 4)][:size]
 
     avg = sum(freq.values()) / 90
-
-    # FIX: escludi numeri < 10
     candidates = list(range(10, 91))
-
-    # Ordina per distanza dalla media
     scored = sorted(candidates, key=lambda n: abs(freq[n] - avg))
     pool = scored[:size]
 
-    # Forza almeno 6 numeri > 60 (anti-crowd forte)
     anti = [n for n in range(61, 91) if n not in pool]
     anti.sort(key=lambda n: abs(freq[n] - avg))
     for n in anti[:6]:
@@ -126,13 +126,60 @@ def build_pool_from_history(history, size=25):
     return sorted(set(pool))
 
 
+def score_sestina(s, fp_eng, crowd_model):
+    """
+    Score composito v3: combina anti-crowd bayesiano + fingerprint avanzati.
+    Ritorna (anti_crowd_v3, adv_score, composite).
+    """
+    # Anti-crowd v3 (bayesiano)
+    if crowd_model:
+        ac = crowd_model.anti_crowd_score_v3(s)
+    else:
+        ac = anti_crowd_score_v1(s)
+
+    # Fingerprint avanzati
+    adv = 0.5
+    if fp_eng:
+        try:
+            adv = fp_eng.score_sestina(s)["composite"]
+        except Exception:
+            pass
+
+    # Composito: 60% anti-crowd, 40% fingerprint
+    # (bilanciamento nuovo, più peso all'anti-crowd)
+    ac_norm = ac / 10.0  # normalizza a 0-1
+    composite = 0.6 * ac_norm + 0.4 * adv
+
+    return ac, adv, composite
+
+
 def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
     print("=" * 65)
-    print("AURORA ENGINE v2 — PIPELINE")
+    print("AURORA ENGINE v3 — PIPELINE")
     print("=" * 65)
 
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
+
+    # Data prossima (per crowd context)
+    next_date = None
+    if history:
+        ld = history[-1]
+        ldate = ld.get("data", "")
+        try:
+            dt = datetime.strptime(ldate, "%d/%m/%Y")
+            next_date = (dt + timedelta(days=1)).strftime("%d/%m/%Y")
+        except Exception:
+            pass
+
+    # Crowd model (con contesto temporale)
+    crowd_model = None
+    if CROWD_V3:
+        crowd_model = CrowdModel(
+            date_str=next_date,
+            jackpot=rendita * 20 * 12,  # valore rendita totale
+        )
+        print(f"[*] CrowdModel v3: attivo (ctx ×{crowd_model.m_context:.3f})")
 
     # Regime
     regime = None
@@ -178,7 +225,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
     pool = build_pool_from_history(history, 25)
     print(f"[*] Pool: {pool}")
 
-    # FIX: 100-200 candidati invece di 20
     n_cand = min(200, max(100, n_sestinas * 100))
     print(f"[*] Generazione {n_cand} candidati...")
     cand, fp = generate_aurora_sestinas(history, pool, n_sestinas=n_cand)
@@ -198,78 +244,79 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         except Exception as e:
             print(f"[!] FP avanzati errore: {e}")
 
-    # FIX: Score candidati con filtro AC >= 6.0
+    # Scoring con CrowdModel v3
     scored = []
     rejected = 0
     for s in cand:
-        base = anti_crowd_score(s)
-        if base < AC_MIN_THRESHOLD:
+        ac, adv, comp = score_sestina(s, fp_eng, crowd_model)
+        if ac < AC_MIN_THRESHOLD:
             rejected += 1
             continue
-        adv = 0.5
-        if fp_eng:
-            try:
-                adv = fp_eng.score_sestina(s)["composite"]
-            except Exception:
-                pass
-        comp = 0.5 * (base / 10.0) + 0.5 * adv
-        scored.append((s, comp))
+        scored.append((s, comp, ac, adv))
 
     if rejected > 0:
-        print(f"[*] Filtro AC: {rejected} sestine scartate (AC < {AC_MIN_THRESHOLD})")
+        print(f"[*] Filtro AC v3: {rejected} sestine scartate (AC < {AC_MIN_THRESHOLD})")
 
-    # Fallback: se il filtro elimina tutto, rilascia
     if not scored:
-        print(f"[!] Nessuna sestina con AC >= {AC_MIN_THRESHOLD}. Rilascio filtro.")
+        print(f"[!] Nessuna sestina con AC v3 >= {AC_MIN_THRESHOLD}. Rilascio filtro.")
         for s in cand:
-            base = anti_crowd_score(s)
-            adv = 0.5
-            if fp_eng:
-                try:
-                    adv = fp_eng.score_sestina(s)["composite"]
-                except Exception:
-                    pass
-            comp = 0.5 * (base / 10.0) + 0.5 * adv
-            scored.append((s, comp))
+            ac, adv, comp = score_sestina(s, fp_eng, crowd_model)
+            scored.append((s, comp, ac, adv))
 
     print(f"[*] Candidati validi dopo filtro: {len(scored)}")
 
-    # Portfolio
-    if PORTF and len(scored) > 0:
+    # Ordina e portfolio
+    scored_simple = [(s, comp) for s, comp, _, _ in scored]
+
+    if PORTF and len(scored_simple) > 0:
         try:
-            opt = PortfolioOptimizer(scored)
+            opt = PortfolioOptimizer(scored_simple)
             portfolio = opt.optimize(n_sestinas=n_sestinas, verbose=False)
             pmetrics = opt.score_portfolio([s for s, _ in portfolio])
             print(f"[*] Portfolio: composite {pmetrics['composite']:.3f}, corr {pmetrics['correlation']:.3f}")
         except Exception as e:
             print(f"[!] Portfolio errore: {e}")
-            scored.sort(key=lambda x: x[1], reverse=True)
-            portfolio = scored[:n_sestinas]
+            scored_simple.sort(key=lambda x: x[1], reverse=True)
+            portfolio = scored_simple[:n_sestinas]
             pmetrics = None
     else:
-        scored.sort(key=lambda x: x[1], reverse=True)
-        portfolio = scored[:n_sestinas]
+        scored_simple.sort(key=lambda x: x[1], reverse=True)
+        portfolio = scored_simple[:n_sestinas]
         pmetrics = None
 
-    # Sestine data
+    # Sestine data (con crowd v3)
     sdata = []
-    for i, (s, sc) in enumerate(portfolio, 1):
+    for i, (s, comp) in enumerate(portfolio, 1):
         ssum = sum(s)
-        ac = anti_crowd_score(s)
+        if crowd_model:
+            ac_v3 = crowd_model.anti_crowd_score_v3(s)
+            crowd = crowd_model.estimate_crowding(s)
+            share = crowd_model.expected_share(s)
+        else:
+            ac_v3 = anti_crowd_score_v1(s)
+            crowd = None
+            share = None
+
         fpd = None
         if fp_eng:
             try:
                 fpd = fp_eng.score_sestina(s)
             except Exception:
                 pass
+
         sdata.append({
-            "id": i, "numeri": s, "somma": ssum,
+            "id": i,
+            "numeri": s,
+            "somma": ssum,
             "in_range": SUM_HARD_MIN <= ssum <= SUM_HARD_MAX,
-            "composite_score": round(sc, 4),
-            "anti_crowd_score": round(ac, 2),
+            "composite_score": round(comp, 4),
+            "anti_crowd_score": round(ac_v3, 2),
+            "crowd_index": crowd,
+            "expected_share_eur": share,
             "fingerprint_detail": fpd,
         })
-        print(f"  {i}. {s} | somma {ssum} | AC {ac:.2f} | score {sc:.4f}")
+        print(f"  {i}. {s} | somma {ssum} | ACv3 {ac_v3:.2f} | "
+              f"share €{share:,.0f}" if share else f"  {i}. {s} | somma {ssum} | ACv3 {ac_v3:.2f}")
 
     payload = build_payload(history, sdata, budget, rendita, ev, fp,
                             pmetrics, regime, bs)
@@ -299,7 +346,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, pmetrics, regime, bs)
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "2.0",
+        "version": "3.0",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -327,7 +374,7 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v2 — REPORT",
+        "🌅 AURORA ENGINE v3 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
@@ -358,13 +405,16 @@ def format_report(payload):
             e = em[i] if i < len(em) else f"{i+1}."
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   {e} [{ns}]")
-            lines.append(f"      Somma {s['somma']} · AC {s['anti_crowd_score']:.2f}")
+            line = f"      Somma {s['somma']} · ACv3 {s['anti_crowd_score']:.2f}"
+            if s.get("expected_share_eur"):
+                line += f" · Share €{s['expected_share_eur']:,.0f}"
+            lines.append(line)
         lines.append("")
     if payload.get("portfolio_metrics"):
         pm = payload["portfolio_metrics"]
         lines.append(f"📊 Portfolio: corr {pm['correlation']:.3f} (↓ meglio)")
         lines.append("")
-    lines.append("🌅 Aurora Engine v2 — Super Win for Life")
+    lines.append("🌅 Aurora Engine v3 — Super Win for Life")
     return "\n".join(lines)
 
 
