@@ -2,10 +2,10 @@
 fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da AGIMEG.
 
-FIX (2026-09-22):
-- Ripristinata fonte AGIMEG (Sisal bloccato da anti-bot comportamentale)
+FIX (2026-09-23):
+- Fonte AGIMEG (Sisal bloccato da anti-bot comportamentale)
 - Parser con 4 strategie a cascata
-- Rimossi playwright e curl_cffi (non più necessari)
+- Nessuna dipendenza da playwright/curl_cffi
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
@@ -46,9 +46,6 @@ MESI_IT = {
 MESI_IT_INV = {v: k for k, v in MESI_IT.items()}
 
 
-# ==========================================
-# UTILITY
-# ==========================================
 def load_history():
     if os.path.exists(HISTORY_FILE):
         try:
@@ -85,11 +82,7 @@ def build_search_url(data):
     return f"{BASE_URL}/?s=Super+Win+for+Life+{giorno}+{mese}+{anno}"
 
 
-# ==========================================
-# PARSING
-# ==========================================
 def parse_article(html, verbose=True):
-    """Estrae i dati con 4 strategie a cascata."""
     text = re.sub(r"<[^>]+>", " ", html)
     text = re.sub(r"&nbsp;", " ", text)
     text = re.sub(r"&[a-z]+;", " ", text)
@@ -97,12 +90,10 @@ def parse_article(html, verbose=True):
 
     result = {}
 
-    # CONCORSO
     m = re.search(r"concorso\s*n(?:\.|umero)?\s*(\d{1,4})", text, re.IGNORECASE)
     if m:
         result["concorso"] = int(m.group(1))
 
-    # DATA (fallback)
     m = re.search(
         r"Super Win for Life\s+(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})",
         text, re.IGNORECASE
@@ -113,10 +104,8 @@ def parse_article(html, verbose=True):
         anno = int(m.group(3))
         result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
 
-    # NUMERI (4 strategie)
     numbers = None
 
-    # S1: contesto "è:"
     if not numbers:
         m = re.search(
             r"(?:è|sono|vincente|estratti|combinazione)[\s:]*((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
@@ -131,7 +120,6 @@ def parse_article(html, verbose=True):
                 if verbose:
                     print(f"    [S1] numeri trovati con contesto")
 
-    # S2: separatore –
     if not numbers:
         m = re.search(r"((?:\d{1,2}\s*[–\-]\s*){7,}\d{1,2})", text)
         if m:
@@ -143,7 +131,6 @@ def parse_article(html, verbose=True):
                 if verbose:
                     print(f"    [S2] numeri trovati con separatore")
 
-    # S3: blocco ampio
     if not numbers:
         for m in re.finditer(r"((?:\b\d{1,2}\b[\s,·]+){15,}\b\d{1,2}\b)", text):
             nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", m.group(1))]
@@ -155,7 +142,6 @@ def parse_article(html, verbose=True):
                     print(f"    [S3] numeri trovati in blocco ampio")
                 break
 
-    # S4: keyword "numeri"
     if not numbers:
         m = re.search(r"numeri.{0,200}", text, re.IGNORECASE)
         if m:
@@ -174,9 +160,6 @@ def parse_article(html, verbose=True):
     return result
 
 
-# ==========================================
-# RICERCA ARTICOLO
-# ==========================================
 def find_article_url_for_date(data):
     search_url = build_search_url(data)
     html = fetch_url(search_url)
@@ -223,9 +206,6 @@ def fetch_extraction_for_date(data, verbose=True):
     return parsed
 
 
-# ==========================================
-# MERGE
-# ==========================================
 def merge_history(existing, fetched):
     existing_ids = {e.get("concorso") for e in existing
                     if isinstance(e.get("concorso"), int)}
@@ -243,9 +223,6 @@ def sort_chronological(history):
     return sorted(history, key=sort_key)
 
 
-# ==========================================
-# MAIN
-# ==========================================
 def main():
     print("=== AURORA ENGINE — FETCH VINCI DRAW (AGIMEG) ===")
 
