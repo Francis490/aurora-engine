@@ -3,9 +3,9 @@ fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da Sisal.
 
 FIX (2026-09-22):
-- Usa curl_cffi per impersonificare il fingerprint TLS di Chrome e bypassare Cloudflare.
+- Usa Playwright per simulare un browser reale e superare Cloudflare.
 - Rimuove completamente AGIMEG come fonte.
-- Parser ottimizzato per la pagina di Sisal.
+- Parser ottimizzato per il rendering JavaScript di Sisal.
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
@@ -18,8 +18,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from curl_cffi import requests
-from curl_cffi.requests.errors import RequestsError
+from playwright.sync_api import sync_playwright
 
 
 HISTORY_FILE = "vinci_history.json"
@@ -28,24 +27,7 @@ HISTORY_FILE = "vinci_history.json"
 SISAL_URLS = [
     "https://www.sisal.it/estrazioni/super-win-for-life",
     "https://www.sisal.it/super-win-for-life/estrazioni",
-    "https://www.sisal.it/",
 ]
-
-# Header "browser-like" (curl_cffi aggiunge il fingerprint TLS corretto)
-HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
-              "image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "DNT": "1",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Cache-Control": "max-age=0",
-}
 
 MESI_IT = {
     "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
@@ -79,56 +61,26 @@ def save_history(data):
 
 def clean_html(html):
     """Rimuove tag HTML, script e style per ottenere solo il testo."""
-    # Rimuovi script e style
     html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
     html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
-    # Rimuovi tag
     text = re.sub(r"<[^>]+>", " ", html)
-    # Decodifica entità
     text = text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"')
     text = re.sub(r"&#\d+;", " ", text)
-    # Normalizza spazi
     return re.sub(r"\s+", " ", text)
-
-
-# ==========================================
-# FETCH CON CURL_CFFI
-# ==========================================
-def fetch_url(url, timeout=30):
-    """Fetch URL con curl_cffi (impersona Chrome)."""
-    try:
-        r = requests.get(
-            url,
-            headers=HEADERS,
-            impersonate="chrome124",  # Fingerprint TLS di Chrome 124
-            timeout=timeout,
-        )
-        r.raise_for_status()
-        return r.text
-    except RequestsError as e:
-        print(f"    ✗ errore curl_cffi: {e}")
-        return None
-    except Exception as e:
-        print(f"    ✗ errore: {e}")
-        return None
 
 
 # ==========================================
 # PARSING UNIVERSALE
 # ==========================================
 def parse_extraction_from_text(text, target_date=None):
-    """
-    Cerca un'estrazione nel testo con 4 strategie a cascata.
-    """
+    """Cerca un'estrazione nel testo con 4 strategie a cascata."""
     text_clean = re.sub(r"\s+", " ", text)
     result = {}
 
-    # --- CONCORSO ---
     m = re.search(r"concorso\s*n[°.]?\s*(\d{1,4})", text_clean, re.IGNORECASE)
     if m:
         result["concorso"] = int(m.group(1))
 
-    # --- DATA ---
     if target_date:
         result["data"] = target_date.strftime("%d/%m/%Y")
     else:
@@ -142,10 +94,8 @@ def parse_extraction_from_text(text, target_date=None):
             anno = int(m.group(3))
             result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
 
-    # --- NUMERI (4 strategie) ---
     numbers = None
 
-    # S1: "è: 5 – 8 – 17..." o "vincente: 5, 8, ..."
     if not numbers:
         m = re.search(
             r"(?:è|sono|vincente|estratti|combinazione)[\s:]*((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
@@ -159,7 +109,6 @@ def parse_extraction_from_text(text, target_date=None):
                 numbers = unique[:8]
                 print(f"    [S1] numeri trovati con contesto")
 
-    # S2: sequenza di 8+ numeri con separatore – o -
     if not numbers:
         m = re.search(r"((?:\d{1,2}\s*[–\-]\s*){7,}\d{1,2})", text_clean)
         if m:
@@ -170,7 +119,6 @@ def parse_extraction_from_text(text, target_date=None):
                 numbers = unique[:8]
                 print(f"    [S2] numeri trovati con separatore")
 
-    # S3: blocco di 20+ numeri 1-90 consecutivi
     if not numbers:
         for m in re.finditer(r"((?:\b\d{1,2}\b[\s,·]+){15,}\b\d{1,2}\b)", text_clean):
             nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", m.group(1))]
@@ -181,7 +129,6 @@ def parse_extraction_from_text(text, target_date=None):
                 print(f"    [S3] numeri trovati in blocco ampio")
                 break
 
-    # S4: keyword "numeri" + prendi 8 dopo
     if not numbers:
         m = re.search(r"numeri.{0,200}", text_clean, re.IGNORECASE)
         if m:
@@ -201,32 +148,47 @@ def parse_extraction_from_text(text, target_date=None):
 
 
 # ==========================================
-# FETCH SISAL
+# FETCH CON PLAYWRIGHT
 # ==========================================
 def fetch_extraction(target_date):
-    """
-    Prova a recuperare l'estrazione da Sisal.
-    """
+    """Recupera l'estrazione da Sisal usando un browser headless."""
     print(f"\n{'=' * 60}")
     print(f"[*] Recupero estrazione del {target_date.strftime('%d/%m/%Y')}")
     print(f"{'=' * 60}")
 
-    for url in SISAL_URLS:
-        print(f"[*] URL: {url}")
-        html = fetch_url(url)
-        if not html:
-            continue
+    with sync_playwright() as p:
+        # Avvia Chromium in modalità headless
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
+        )
+        page = context.new_page()
 
-        text = clean_html(html)
-        parsed = parse_extraction_from_text(text, target_date)
+        for url in SISAL_URLS:
+            print(f"[*] URL: {url}")
+            try:
+                # Naviga e aspetta che il JavaScript sia eseguito
+                page.goto(url, wait_until="networkidle", timeout=60000)
+                time.sleep(3)  # piccola pausa per sicurezza
 
-        if parsed and parsed.get("numeri"):
-            parsed["url"] = url
-            print(f"    ✓ Estrazione trovata su Sisal: concorso {parsed.get('concorso')}")
-            return parsed
+                html = page.content()
+                text = clean_html(html)
+                parsed = parse_extraction_from_text(text, target_date)
 
-        print("    ✗ Numeri non trovati nella pagina.")
-        time.sleep(2)
+                if parsed and parsed.get("numeri"):
+                    parsed["url"] = url
+                    print(f"    ✓ Estrazione trovata: concorso {parsed.get('concorso')}")
+                    browser.close()
+                    return parsed
+
+                print("    ✗ Numeri non trovati nella pagina.")
+            except Exception as e:
+                print(f"    ✗ Errore con Playwright: {e}")
+
+            time.sleep(2)
+
+        browser.close()
 
     print("[!] Sisal non raggiungibile o dati non trovati.")
     return None
@@ -261,7 +223,7 @@ def sort_chronological(history):
 # MAIN
 # ==========================================
 def main():
-    print("=== AURORA ENGINE — FETCH VINCI DRAW (SISAL) ===")
+    print("=== AURORA ENGINE — FETCH VINCI DRAW (SISAL + PLAYWRIGHT) ===")
 
     backfill_days = 0
     if len(sys.argv) > 2 and sys.argv[1] == "--backfill":
