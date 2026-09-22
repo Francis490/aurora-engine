@@ -59,6 +59,23 @@
         ]
       ],
       "note": "Concorso 112 — 2 sestine (Aurora v3 + giocata manuale)"
+    },
+    {
+      "concorso": 113,
+      "data": "23/09/2026",
+      "giocata_il": "22/09/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          11,
+          35,
+          46,
+          51,
+          68,
+          87
+        ]
+      ],
+      "note": "Aurora Engine v3 — 1 sestine"
     }
   ]
 }
