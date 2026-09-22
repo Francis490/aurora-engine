@@ -13,6 +13,5 @@ matplotlib==3.8.3
 # --- Generazione icone PWA ---
 Pillow==10.3.0
 
-# --- HTTP per scraping ---
-requests==2.31.0
-beautifulsoup4==4.12.3
+# --- HTTP con impersonificazione TLS (bypass Cloudflare) ---
+curl_cffi==0.7.3
