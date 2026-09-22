@@ -1,20 +1,11 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v3 — Orchestratore integrato.
+AURORA ENGINE v3.3 — Orchestratore con Portfolio V3 + Bias Test.
 
-Pipeline:
-1. Load storico
-2. Regime detection
-3. Bankroll state
-4. EV/Kelly/budget
-5. Pool (esclude < 10) + generator
-6. Fingerprint avanzati + portfolio (filtro AC v3 >= 8.0)
-7. Output database + report
-
-FIX (2026-09-21):
-- Integrato CrowdModel (anti-crowd bayesiano dinamico)
-- AC_MIN_THRESHOLD: 6.5 → 8.0 (scala v3)
-- Report mostra share atteso pro capite in caso di 6 punti
+FIX (2026-09-23):
+- Integrato quick_bias_check
+- 3 sestine multi-profilo (A_trend, B_contrarian, C_coverage)
+- Pesi profili modulati dai bias rilevati
 """
 import json
 import os
@@ -26,18 +17,15 @@ from vinci_vita_math import (
     RENDITA_ATTUALE_MENSILE, COSTO_GIOCATA_EUR,
 )
 from vinci_vita_generator import (
-    generate_aurora_sestinas, extract_fingerprints,
-    anti_crowd_score as anti_crowd_score_v1,  # fallback
+    extract_fingerprints, anti_crowd_score as anti_crowd_score_v1,
     SUM_HARD_MIN, SUM_HARD_MAX,
 )
 
-# FIX: nuovo modulo crowd v3
 try:
     from vinci_vita_crowd import CrowdModel
     CROWD_V3 = True
 except ImportError:
     CROWD_V3 = False
-    print("[!] vinci_vita_crowd non disponibile, uso anti-crowd v1")
 
 try:
     from vinci_vita_fingerprints import AuroraFingerprintEngine
@@ -46,10 +34,18 @@ except ImportError:
     FP_ADV = False
 
 try:
-    from vinci_vita_portfolio import PortfolioOptimizer
-    PORTF = True
+    from vinci_vita_portfolio_v3 import AuroraPortfolioV3
+    PORTF_V3 = True
 except ImportError:
-    PORTF = False
+    PORTF_V3 = False
+    print("[!] vinci_vita_portfolio_v3 non disponibile")
+
+try:
+    from vinci_vita_bias_test import quick_bias_check
+    BIAS_OK = True
+except ImportError:
+    BIAS_OK = False
+    print("[!] vinci_vita_bias_test non disponibile")
 
 try:
     from vinci_vita_bankroll import BankrollManager
@@ -66,9 +62,6 @@ except ImportError:
 
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
-
-# FIX v3: soglia su scala anti_crowd_score_v3 (range 0.1-10)
-AC_MIN_THRESHOLD = 8.0
 
 
 def load_history():
@@ -90,12 +83,9 @@ def save_json(fp, data):
         print(f"[!] Errore salvataggio: {e}")
 
 
-def build_pool_from_history(history, size=25):
-    """
-    Pool builder: esclude numeri < 10, forza 6 numeri > 60.
-    """
+def build_pool_from_history(history, size=30):
     if not history:
-        return [n for n in range(10, 91, 4)][:size]
+        return [n for n in range(10, 91, 3)][:size]
 
     freq = {i: 0 for i in range(1, 91)}
     td = 0
@@ -109,7 +99,7 @@ def build_pool_from_history(history, size=25):
                 freq[n] += 1
 
     if td == 0:
-        return [n for n in range(10, 91, 4)][:size]
+        return [n for n in range(10, 91, 3)][:size]
 
     avg = sum(freq.values()) / 90
     candidates = list(range(10, 91))
@@ -118,7 +108,7 @@ def build_pool_from_history(history, size=25):
 
     anti = [n for n in range(61, 91) if n not in pool]
     anti.sort(key=lambda n: abs(freq[n] - avg))
-    for n in anti[:6]:
+    for n in anti[:8]:
         if len(pool) >= size:
             pool.pop()
         pool.append(n)
@@ -126,62 +116,36 @@ def build_pool_from_history(history, size=25):
     return sorted(set(pool))
 
 
-def score_sestina(s, fp_eng, crowd_model):
-    """
-    Score composito v3: combina anti-crowd bayesiano + fingerprint avanzati.
-    Ritorna (anti_crowd_v3, adv_score, composite).
-    """
-    # Anti-crowd v3 (bayesiano)
-    if crowd_model:
-        ac = crowd_model.anti_crowd_score_v3(s)
-    else:
-        ac = anti_crowd_score_v1(s)
-
-    # Fingerprint avanzati
-    adv = 0.5
-    if fp_eng:
-        try:
-            adv = fp_eng.score_sestina(s)["composite"]
-        except Exception:
-            pass
-
-    # Composito: 60% anti-crowd, 40% fingerprint
-    # (bilanciamento nuovo, più peso all'anti-crowd)
-    ac_norm = ac / 10.0  # normalizza a 0-1
-    composite = 0.6 * ac_norm + 0.4 * adv
-
-    return ac, adv, composite
-
-
-def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
-    print("=" * 65)
-    print("AURORA ENGINE v3 — PIPELINE")
-    print("=" * 65)
+def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=3):
+    print("=" * 70)
+    print("AURORA ENGINE v3.3 — PIPELINE 3 SESTINE + BIAS TEST")
+    print("=" * 70)
 
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
-    # Data prossima (per crowd context)
     next_date = None
     if history:
         ld = history[-1]
-        ldate = ld.get("data", "")
         try:
-            dt = datetime.strptime(ldate, "%d/%m/%Y")
+            dt = datetime.strptime(ld.get("data", ""), "%d/%m/%Y")
             next_date = (dt + timedelta(days=1)).strftime("%d/%m/%Y")
         except Exception:
             pass
 
-    # Crowd model (con contesto temporale)
+    bias_result = None
+    bias_weights = None
+    if BIAS_OK:
+        print(f"\n[*] Analisi bias in corso...")
+        bias_result = quick_bias_check(history, verbose=True)
+        bias_weights = bias_result.get("profile_weights")
+        print(f"[*] Bias health: {bias_result['health']}")
+
     crowd_model = None
     if CROWD_V3:
-        crowd_model = CrowdModel(
-            date_str=next_date,
-            jackpot=rendita * 20 * 12,  # valore rendita totale
-        )
+        crowd_model = CrowdModel(date_str=next_date, jackpot=rendita * 20 * 12)
         print(f"[*] CrowdModel v3: attivo (ctx ×{crowd_model.m_context:.3f})")
 
-    # Regime
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -192,109 +156,61 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
-    # Bankroll
     bm = None
     bs = None
     if BANK:
         try:
             bm = BankrollManager(initial_bankroll=100.0)
             bs = bm.get_state()
-            print(f"[*] Bankroll: €{bs['bankroll']:.2f} | ROI {bs['roi_pct']:+.2f}%")
+            print(f"[*] Bankroll: €{bs['bankroll']:.2f}")
         except Exception as e:
             print(f"[!] Bankroll errore: {e}")
 
-    # EV/Kelly/Budget
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
-    print(f"[*] Budget: {budget['mode']}")
 
-    if n_sestinas is None:
-        n_sestinas = budget["n_sestine"]
+    pool = build_pool_from_history(history, size=30)
+    print(f"[*] Pool ({len(pool)} numeri): {pool}")
 
-    if bm and bm.is_stopped():
-        print("[!] Bankroll in stop")
-        n_sestinas = 0
+    fp = extract_fingerprints(history)
+    print(f"[*] Fingerprint base: {fp['n_draws']} estrazioni")
 
-    if n_sestinas == 0:
-        payload = build_payload(history, [], budget, rendita, ev, None, None, regime, bs)
-        save_json(DATABASE_FILE, payload)
-        return payload
-
-    # Pool + Generator
-    pool = build_pool_from_history(history, 25)
-    print(f"[*] Pool: {pool}")
-
-    n_cand = min(200, max(100, n_sestinas * 100))
-    print(f"[*] Generazione {n_cand} candidati...")
-    cand, fp = generate_aurora_sestinas(history, pool, n_sestinas=n_cand)
-
-    if not cand:
-        print("[!] Nessun candidato.")
-        payload = build_payload(history, [], budget, rendita, ev, None, None, regime, bs)
-        save_json(DATABASE_FILE, payload)
-        return payload
-
-    # Fingerprint avanzati
     fp_eng = None
     if FP_ADV:
         try:
             fp_eng = AuroraFingerprintEngine(history)
-            print(f"[*] FP avanzati: attivi")
-        except Exception as e:
-            print(f"[!] FP avanzati errore: {e}")
+        except Exception:
+            pass
 
-    # Scoring con CrowdModel v3
-    scored = []
-    rejected = 0
-    for s in cand:
-        ac, adv, comp = score_sestina(s, fp_eng, crowd_model)
-        if ac < AC_MIN_THRESHOLD:
-            rejected += 1
-            continue
-        scored.append((s, comp, ac, adv))
+    if not PORTF_V3:
+        print("[!] Portfolio V3 non disponibile.")
+        return None
 
-    if rejected > 0:
-        print(f"[*] Filtro AC v3: {rejected} sestine scartate (AC < {AC_MIN_THRESHOLD})")
+    print(f"\n[*] Costruzione portfolio (3 profili + bias weights)...")
+    p3 = AuroraPortfolioV3(history)
+    portfolio_raw = p3.build(
+        pool,
+        fp_engine=fp_eng,
+        crowd_model=crowd_model,
+        bias_weights=bias_weights,
+        verbose=True,
+    )
 
-    if not scored:
-        print(f"[!] Nessuna sestina con AC v3 >= {AC_MIN_THRESHOLD}. Rilascio filtro.")
-        for s in cand:
-            ac, adv, comp = score_sestina(s, fp_eng, crowd_model)
-            scored.append((s, comp, ac, adv))
+    if not portfolio_raw:
+        print("[!] Portfolio vuoto.")
+        return None
 
-    print(f"[*] Candidati validi dopo filtro: {len(scored)}")
-
-    # Ordina e portfolio
-    scored_simple = [(s, comp) for s, comp, _, _ in scored]
-
-    if PORTF and len(scored_simple) > 0:
-        try:
-            opt = PortfolioOptimizer(scored_simple)
-            portfolio = opt.optimize(n_sestinas=n_sestinas, verbose=False)
-            pmetrics = opt.score_portfolio([s for s, _ in portfolio])
-            print(f"[*] Portfolio: composite {pmetrics['composite']:.3f}, corr {pmetrics['correlation']:.3f}")
-        except Exception as e:
-            print(f"[!] Portfolio errore: {e}")
-            scored_simple.sort(key=lambda x: x[1], reverse=True)
-            portfolio = scored_simple[:n_sestinas]
-            pmetrics = None
-    else:
-        scored_simple.sort(key=lambda x: x[1], reverse=True)
-        portfolio = scored_simple[:n_sestinas]
-        pmetrics = None
-
-    # Sestine data (con crowd v3)
     sdata = []
-    for i, (s, comp) in enumerate(portfolio, 1):
+    for i, item in enumerate(portfolio_raw, 1):
+        s = item["numeri"]
         ssum = sum(s)
+
         if crowd_model:
             ac_v3 = crowd_model.anti_crowd_score_v3(s)
-            crowd = crowd_model.estimate_crowding(s)
             share = crowd_model.expected_share(s)
         else:
             ac_v3 = anti_crowd_score_v1(s)
-            crowd = None
             share = None
 
         fpd = None
@@ -306,25 +222,27 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=None):
 
         sdata.append({
             "id": i,
+            "profilo": item["profilo"],
             "numeri": s,
             "somma": ssum,
-            "in_range": SUM_HARD_MIN <= ssum <= SUM_HARD_MAX,
-            "composite_score": round(comp, 4),
+            "score_profilo": item["score_profilo"],
             "anti_crowd_score": round(ac_v3, 2),
-            "crowd_index": crowd,
             "expected_share_eur": share,
             "fingerprint_detail": fpd,
         })
-        print(f"  {i}. {s} | somma {ssum} | ACv3 {ac_v3:.2f} | "
-              f"share €{share:,.0f}" if share else f"  {i}. {s} | somma {ssum} | ACv3 {ac_v3:.2f}")
+        print(f"  {i}. [{item['profilo']}] {s} | somma {ssum} | ACv3 {ac_v3:.2f}")
+
+    coverage = p3._portfolio_coverage([item["numeri"] for item in portfolio_raw])
+    print(f"\n[*] Coverage portafoglio: {coverage:.4f}")
 
     payload = build_payload(history, sdata, budget, rendita, ev, fp,
-                            pmetrics, regime, bs)
+                            regime, bs, coverage, bias_result)
     save_json(DATABASE_FILE, payload)
     return payload
 
 
-def build_payload(history, sdata, budget, rendita, ev, fp, pmetrics, regime, bs):
+def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
+                  coverage=None, bias_result=None):
     now = datetime.now()
     ld = history[-1] if history else {}
     lc = ld.get("concorso", "N/A")
@@ -346,7 +264,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, pmetrics, regime, bs)
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "3.0",
+        "version": "3.3",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -354,6 +272,18 @@ def build_payload(history, sdata, budget, rendita, ev, fp, pmetrics, regime, bs)
         "n_sestinas": len(sdata),
         "costo_totale": round(len(sdata) * COSTO_GIOCATA_EUR, 2),
         "sestinas": sdata,
+        "portfolio_coverage": round(coverage, 4) if coverage else None,
+        "bias_analysis": {
+            "health": bias_result.get("health"),
+            "chi2": bias_result.get("chi2"),
+            "is_uniform": bias_result.get("is_uniform"),
+            "has_hot_bias": bias_result.get("has_hot_bias"),
+            "has_cold_bias": bias_result.get("has_cold_bias"),
+            "has_autocorr": bias_result.get("has_autocorr"),
+            "hot_numbers": bias_result.get("hot_numbers", [])[:5],
+            "cold_numbers": bias_result.get("cold_numbers", [])[:5],
+            "profile_weights": bias_result.get("profile_weights"),
+        } if bias_result else None,
         "ev": {
             "ev_netto": round(ev["ev_netto"], 4),
             "ev_percentuale": round(ev["ev_percentuale"], 2),
@@ -364,7 +294,6 @@ def build_payload(history, sdata, budget, rendita, ev, fp, pmetrics, regime, bs)
             "n_draws": fp["n_draws"] if fp else 0,
             "sum_mean": fp["sum_mean"] if fp else None,
         } if fp else None,
-        "portfolio_metrics": pmetrics,
         "regime_report": regime,
         "bankroll_state": bs,
     }
@@ -374,24 +303,37 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v3 — REPORT",
+        "🌅 AURORA ENGINE v3.3 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
         f"   Valore attuale: € {payload['valore_attuale_rendita']:,.0f}",
         "",
     ]
+
+    if payload.get("bias_analysis"):
+        ba = payload["bias_analysis"]
+        lines.append(f"🧪 {ba.get('health', 'N/A')}")
+        if ba.get("hot_numbers"):
+            lines.append(f"   Hot: {ba['hot_numbers']}")
+        if ba.get("cold_numbers"):
+            lines.append(f"   Cold: {ba['cold_numbers']}")
+        if ba.get("profile_weights"):
+            w = ba["profile_weights"]
+            lines.append(f"   Pesi: A={w.get('A_trend', 1):.2f} · "
+                         f"B={w.get('B_contrarian', 1):.2f} · "
+                         f"C={w.get('C_coverage', 1):.2f}")
+        lines.append("")
+
     if payload.get("regime_report"):
         lines.append(f"🔬 {payload['regime_report']['health']}")
         lines.append("")
     if payload.get("bankroll_state"):
         bs = payload["bankroll_state"]
-        lines.append(f"💰 Bankroll: €{bs['bankroll']:.2f} (peak €{bs['peak']:.2f})")
-        lines.append(f"   ROI: {bs['roi_pct']:+.2f}%")
+        lines.append(f"💰 Bankroll: €{bs['bankroll']:.2f}")
         lines.append("")
     nd = payload["next_draw"]
-    lines.append(f"🎯 PROSSIMA: Concorso N° {nd['concorso']}")
-    lines.append(f"   {nd['data']} · ore {nd['ora']}")
+    lines.append(f"🎯 PROSSIMA: Concorso N° {nd['concorso']} · {nd['data']}")
     lines.append("")
     ld = payload["last_draw"]
     if ld["numeri"]:
@@ -399,27 +341,26 @@ def format_report(payload):
         lines.append(f"📊 ULTIMA (N° {ld['concorso']}): {ns}")
         lines.append("")
     if payload["sestinas"]:
-        lines.append(f"🎲 SESTINE ({payload['n_sestinas']} · €{payload['costo_totale']:.2f})")
-        em = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
-        for i, s in enumerate(payload["sestinas"]):
-            e = em[i] if i < len(em) else f"{i+1}."
+        lines.append(f"🎲 3 SESTINE MULTI-PROFILO (€{payload['costo_totale']:.2f})")
+        for s in payload["sestinas"]:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
-            lines.append(f"   {e} [{ns}]")
+            lines.append(f"   [{s['profilo']}]")
+            lines.append(f"      <code>[{ns}]</code>")
             line = f"      Somma {s['somma']} · ACv3 {s['anti_crowd_score']:.2f}"
             if s.get("expected_share_eur"):
                 line += f" · Share €{s['expected_share_eur']:,.0f}"
             lines.append(line)
         lines.append("")
-    if payload.get("portfolio_metrics"):
-        pm = payload["portfolio_metrics"]
-        lines.append(f"📊 Portfolio: corr {pm['correlation']:.3f} (↓ meglio)")
-        lines.append("")
-    lines.append("🌅 Aurora Engine v3 — Super Win for Life")
+        if payload.get("portfolio_coverage"):
+            lines.append(f"📊 Coverage portafoglio: {payload['portfolio_coverage']:.3f}")
+            lines.append("")
+    lines.append("🌅 Aurora Engine v3.3 — Super Win for Life")
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     payload = run_engine()
-    print("\n" + "=" * 65)
-    print(format_report(payload))
-    print("=" * 65)
+    if payload:
+        print("\n" + "=" * 70)
+        print(format_report(payload))
+        print("=" * 70)
