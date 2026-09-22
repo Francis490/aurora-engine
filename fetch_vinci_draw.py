@@ -2,10 +2,12 @@
 fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da Sisal.
 
-FIX (2026-09-22):
-- Usa Playwright per simulare un browser reale e superare Cloudflare.
-- Rimuove completamente AGIMEG come fonte.
-- Parser ottimizzato per il rendering JavaScript di Sisal.
+FIX (2026-09-22 v2):
+- Aggiunti argomenti anti-detection (--disable-blink-features=AutomationControlled)
+- Forzato HTTP/1.1 (--disable-http2) per bypassare Cloudflare
+- Init script per nascondere navigator.webdriver
+- Cambio wait_until: da "networkidle" a "domcontentloaded" + attesa
+- User-agent + headers realistici
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
@@ -23,7 +25,6 @@ from playwright.sync_api import sync_playwright
 
 HISTORY_FILE = "vinci_history.json"
 
-# URL di Sisal da provare in cascata
 SISAL_URLS = [
     "https://www.sisal.it/estrazioni/super-win-for-life",
     "https://www.sisal.it/super-win-for-life/estrazioni",
@@ -35,6 +36,35 @@ MESI_IT = {
     "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
 }
 MESI_IT_INV = {v: k for k, v in MESI_IT.items()}
+
+# ==========================================
+# USER-AGENT E HEADERS REALISTICI
+# ==========================================
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/128.0.0.0 Safari/537.36"
+)
+
+EXTRA_HEADERS = {
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+              "image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Sec-Ch-Ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "DNT": "1",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+# Script iniettato PRIMA del caricamento pagina:
+# nasconde navigator.webdriver (rileva automation)
+INIT_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+Object.defineProperty(navigator, 'languages', { get: () => ['it-IT', 'it', 'en-US', 'en'] });
+Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+window.chrome = { runtime: {} };
+"""
 
 
 # ==========================================
@@ -60,7 +90,6 @@ def save_history(data):
 
 
 def clean_html(html):
-    """Rimuove tag HTML, script e style per ottenere solo il testo."""
     html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
     html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", html)
@@ -70,10 +99,9 @@ def clean_html(html):
 
 
 # ==========================================
-# PARSING UNIVERSALE
+# PARSING
 # ==========================================
 def parse_extraction_from_text(text, target_date=None):
-    """Cerca un'estrazione nel testo con 4 strategie a cascata."""
     text_clean = re.sub(r"\s+", " ", text)
     result = {}
 
@@ -148,31 +176,57 @@ def parse_extraction_from_text(text, target_date=None):
 
 
 # ==========================================
-# FETCH CON PLAYWRIGHT
+# FETCH CON PLAYWRIGHT + ANTI-DETECTION
 # ==========================================
 def fetch_extraction(target_date):
-    """Recupera l'estrazione da Sisal usando un browser headless."""
     print(f"\n{'=' * 60}")
     print(f"[*] Recupero estrazione del {target_date.strftime('%d/%m/%Y')}")
     print(f"{'=' * 60}")
 
     with sync_playwright() as p:
-        # Avvia Chromium in modalità headless
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
+        # Argomenti anti-detection + forza HTTP/1.1
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-http2",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+                "--window-size=1920,1080",
+            ],
         )
+
+        context = browser.new_context(
+            user_agent=USER_AGENT,
+            viewport={"width": 1920, "height": 1080},
+            locale="it-IT",
+            timezone_id="Europe/Rome",
+            extra_http_headers=EXTRA_HEADERS,
+        )
+
+        # Nasconde navigator.webdriver prima del caricamento pagina
+        context.add_init_script(INIT_SCRIPT)
+
         page = context.new_page()
 
         for url in SISAL_URLS:
             print(f"[*] URL: {url}")
             try:
-                # Naviga e aspetta che il JavaScript sia eseguito
-                page.goto(url, wait_until="networkidle", timeout=60000)
-                time.sleep(3)  # piccola pausa per sicurezza
+                # "domcontentloaded" invece di "networkidle" (Cloudflare non chiude mai la rete)
+                page.goto(url, wait_until="domcontentloaded", timeout=45000)
+
+                # Attesa extra per JS dinamico (pallini numeri)
+                page.wait_for_timeout(5000)
+
+                # Scrolla per triggerare lazy-loading
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(2000)
 
                 html = page.content()
+                print(f"    [debug] HTML scaricato: {len(html)} byte")
+
                 text = clean_html(html)
                 parsed = parse_extraction_from_text(text, target_date)
 
@@ -183,8 +237,12 @@ def fetch_extraction(target_date):
                     return parsed
 
                 print("    ✗ Numeri non trovati nella pagina.")
+                # Debug: mostra un estratto del testo
+                if len(text) > 300:
+                    print(f"    [debug] Estratto: {text[:300]}...")
+
             except Exception as e:
-                print(f"    ✗ Errore con Playwright: {e}")
+                print(f"    ✗ Errore Playwright: {str(e)[:150]}")
 
             time.sleep(2)
 
@@ -223,7 +281,7 @@ def sort_chronological(history):
 # MAIN
 # ==========================================
 def main():
-    print("=== AURORA ENGINE — FETCH VINCI DRAW (SISAL + PLAYWRIGHT) ===")
+    print("=== AURORA ENGINE — FETCH VINCI DRAW (SISAL + PLAYWRIGHT v2) ===")
 
     backfill_days = 0
     if len(sys.argv) > 2 and sys.argv[1] == "--backfill":
