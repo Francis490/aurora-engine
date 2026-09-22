@@ -1,17 +1,11 @@
 """
 fetch_vinci_draw.py
-AURORA ENGINE — Raccolta estrazioni Super Win for Life da AGIMEG.
+AURORA ENGINE — Raccolta estrazioni Super Win for Life da Sisal.
 
-Fonte: https://www.agimeg.it
-Formato: ogni giorno AGIMEG pubblica un articolo con:
-- Numero concorso
-- Combinazione vincente (8 numeri)
-- Quote complete
-
-FIX (2026-09-20):
-- Parser con 4 strategie a cascata per gestire formati diversi
-- Fallback su ricerca numerica ampia (blocchi di 8+ numeri)
-- Migliore gestione articoli "vincite-super-rendita" vs "estrazione-quote"
+FIX (2026-09-22):
+- Usa curl_cffi per impersonificare il fingerprint TLS di Chrome e bypassare Cloudflare.
+- Rimuove completamente AGIMEG come fonte.
+- Parser ottimizzato per la pagina di Sisal.
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
@@ -24,24 +18,34 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.errors import RequestsError
 
 
 HISTORY_FILE = "vinci_history.json"
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
+# URL di Sisal da provare in cascata
+SISAL_URLS = [
+    "https://www.sisal.it/estrazioni/super-win-for-life",
+    "https://www.sisal.it/super-win-for-life/estrazioni",
+    "https://www.sisal.it/",
+]
 
+# Header "browser-like" (curl_cffi aggiunge il fingerprint TLS corretto)
 HEADERS = {
-    "User-Agent": USER_AGENT,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+              "image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
 }
-
-BASE_URL = "https://www.agimeg.it"
 
 MESI_IT = {
     "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
@@ -73,224 +77,171 @@ def save_history(data):
         print(f"[!] Errore salvataggio: {e}")
 
 
-def fetch_url(url, timeout=20):
+def clean_html(html):
+    """Rimuove tag HTML, script e style per ottenere solo il testo."""
+    # Rimuovi script e style
+    html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    # Rimuovi tag
+    text = re.sub(r"<[^>]+>", " ", html)
+    # Decodifica entità
+    text = text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"')
+    text = re.sub(r"&#\d+;", " ", text)
+    # Normalizza spazi
+    return re.sub(r"\s+", " ", text)
+
+
+# ==========================================
+# FETCH CON CURL_CFFI
+# ==========================================
+def fetch_url(url, timeout=30):
+    """Fetch URL con curl_cffi (impersona Chrome)."""
     try:
-        r = requests.get(url, headers=HEADERS, timeout=timeout)
+        r = requests.get(
+            url,
+            headers=HEADERS,
+            impersonate="chrome124",  # Fingerprint TLS di Chrome 124
+            timeout=timeout,
+        )
         r.raise_for_status()
         return r.text
+    except RequestsError as e:
+        print(f"    ✗ errore curl_cffi: {e}")
+        return None
     except Exception as e:
-        print(f"    ✗ errore fetch: {e}")
+        print(f"    ✗ errore: {e}")
         return None
 
 
-def build_search_url(data: datetime) -> str:
-    giorno = data.day
-    mese = MESI_IT_INV[data.month]
-    anno = data.year
-    return f"{BASE_URL}/?s=Super+Win+for+Life+{giorno}+{mese}+{anno}"
-
-
 # ==========================================
-# PARSING — 4 STRATEGIE A CASCATA
+# PARSING UNIVERSALE
 # ==========================================
-def parse_article(html: str, verbose: bool = True) -> dict:
+def parse_extraction_from_text(text, target_date=None):
     """
-    Estrae i dati dell'estrazione dal testo dell'articolo AGIMEG.
-    Usa 4 strategie a cascata.
+    Cerca un'estrazione nel testo con 4 strategie a cascata.
     """
-    # Pulisci HTML
-    text = re.sub(r"<[^>]+>", " ", html)
-    text = re.sub(r"&nbsp;", " ", text)
-    text = re.sub(r"&[a-z]+;", " ", text)
-    text = re.sub(r"\s+", " ", text)
-
+    text_clean = re.sub(r"\s+", " ", text)
     result = {}
 
-    # === CONCORSO ===
-    m = re.search(r"concorso\s*n(?:\.|umero)?\s*(\d{1,4})", text, re.IGNORECASE)
+    # --- CONCORSO ---
+    m = re.search(r"concorso\s*n[°.]?\s*(\d{1,4})", text_clean, re.IGNORECASE)
     if m:
         result["concorso"] = int(m.group(1))
 
-    # === DATA ===
-    m = re.search(
-        r"Super Win for Life\s+(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})",
-        text, re.IGNORECASE
-    )
-    if m:
-        giorno = int(m.group(1))
-        mese = MESI_IT[m.group(2).lower()]
-        anno = int(m.group(3))
-        result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
+    # --- DATA ---
+    if target_date:
+        result["data"] = target_date.strftime("%d/%m/%Y")
     else:
-        # Fallback: cerca nel titolo "Super Win for Life 19 settembre"
         m = re.search(
-            r"(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)",
-            text, re.IGNORECASE
+            r"(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})",
+            text_clean, re.IGNORECASE
         )
         if m:
             giorno = int(m.group(1))
             mese = MESI_IT[m.group(2).lower()]
-            # Cerca anno vicino
-            anno_m = re.search(r"\b(20\d{2})\b", text)
-            anno = int(anno_m.group(1)) if anno_m else datetime.now().year
+            anno = int(m.group(3))
             result["data"] = f"{giorno:02d}/{mese:02d}/{anno}"
 
-    # === NUMERI — 4 strategie ===
+    # --- NUMERI (4 strategie) ---
     numbers = None
 
-    # Strategia 1: pattern esplicito "è: 5 – 8 – 17..."
+    # S1: "è: 5 – 8 – 17..." o "vincente: 5, 8, ..."
     if not numbers:
         m = re.search(
             r"(?:è|sono|vincente|estratti|combinazione)[\s:]*((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
-            text, re.IGNORECASE
+            text_clean, re.IGNORECASE
         )
         if m:
             nums = [int(n) for n in re.findall(r"\d{1,2}", m.group(1))]
             nums = [n for n in nums if 1 <= n <= 90]
-            if len(nums) >= 8:
-                # Deduplica mantenendo ordine
-                seen = set()
-                unique = []
-                for n in nums:
-                    if n not in seen:
-                        seen.add(n)
-                        unique.append(n)
-                if len(unique) >= 8:
-                    numbers = unique[:8]
-                    if verbose:
-                        print(f"    [strategy 1] numeri trovati con contesto 'è/vincente'")
+            unique = list(dict.fromkeys(nums))
+            if len(unique) >= 8:
+                numbers = unique[:8]
+                print(f"    [S1] numeri trovati con contesto")
 
-    # Strategia 2: sequenza di 8+ numeri separati da – o -
+    # S2: sequenza di 8+ numeri con separatore – o -
     if not numbers:
-        m = re.search(
-            r"((?:\d{1,2}\s*[–\-]\s*){7,}\d{1,2})",
-            text
-        )
+        m = re.search(r"((?:\d{1,2}\s*[–\-]\s*){7,}\d{1,2})", text_clean)
         if m:
             nums = [int(n) for n in re.findall(r"\d{1,2}", m.group(1))]
             nums = [n for n in nums if 1 <= n <= 90]
-            if len(nums) >= 8:
-                seen = set()
-                unique = []
-                for n in nums:
-                    if n not in seen:
-                        seen.add(n)
-                        unique.append(n)
-                if len(unique) >= 8:
-                    numbers = unique[:8]
-                    if verbose:
-                        print(f"    [strategy 2] numeri trovati con separatore '–'")
+            unique = list(dict.fromkeys(nums))
+            if len(unique) >= 8:
+                numbers = unique[:8]
+                print(f"    [S2] numeri trovati con separatore")
 
-    # Strategia 3: blocco numerico esteso (numeri separati da spazi/virgole)
+    # S3: blocco di 20+ numeri 1-90 consecutivi
     if not numbers:
-        # Cerca blocchi di 20+ numeri consecutivi 1-90
-        for m in re.finditer(r"((?:\b\d{1,2}\b[\s,·]+){15,}\b\d{1,2}\b)", text):
+        for m in re.finditer(r"((?:\b\d{1,2}\b[\s,·]+){15,}\b\d{1,2}\b)", text_clean):
             nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", m.group(1))]
             nums = [n for n in nums if 1 <= n <= 90]
-            if len(nums) >= 8:
-                # Dedup
-                seen = set()
-                unique = []
-                for n in nums:
-                    if n not in seen:
-                        seen.add(n)
-                        unique.append(n)
-                # Prendi i primi 8 (spesso sono quelli dell'estrazione)
-                if len(unique) >= 8:
-                    numbers = unique[:8]
-                    if verbose:
-                        print(f"    [strategy 3] numeri trovati in blocco ampio")
-                    break
+            unique = list(dict.fromkeys(nums))
+            if len(unique) >= 8:
+                numbers = unique[:8]
+                print(f"    [S3] numeri trovati in blocco ampio")
+                break
 
-    # Strategia 4: cerca la parola "numeri" e prendi i primi 8 numeri dopo
+    # S4: keyword "numeri" + prendi 8 dopo
     if not numbers:
-        m = re.search(r"numeri.{0,200}", text, re.IGNORECASE)
+        m = re.search(r"numeri.{0,200}", text_clean, re.IGNORECASE)
         if m:
             chunk = m.group(0)
             nums = [int(n) for n in re.findall(r"\b(\d{1,2})\b", chunk)]
-            nums = [n for n in nums if 1 <= n <= 90 and n != 0]
-            # Dedup
-            seen = set()
-            unique = []
-            for n in nums:
-                if n not in seen:
-                    seen.add(n)
-                    unique.append(n)
+            nums = [n for n in nums if 1 <= n <= 90]
+            unique = list(dict.fromkeys(nums))
             if len(unique) >= 8:
                 numbers = unique[:8]
-                if verbose:
-                    print(f"    [strategy 4] numeri trovati dopo keyword 'numeri'")
+                print(f"    [S4] numeri trovati dopo keyword")
 
     if numbers:
         result["numeri"] = numbers
-
-    return result
-
-
-# ==========================================
-# RICERCA ARTICOLO
-# ==========================================
-def find_article_url_for_date(data: datetime) -> str:
-    search_url = build_search_url(data)
-    html = fetch_url(search_url)
-    if not html:
-        return None
-
-    data_str = f"{data.day}-{MESI_IT_INV[data.month]}-{data.year}"
-    pattern = re.compile(
-        rf'href="(https://www\.agimeg\.it/super-win-for-life-{data_str}[^"]*)"',
-        re.IGNORECASE
-    )
-    matches = pattern.findall(html)
-    if matches:
-        return matches[0]
-
-    # Fallback
-    pattern2 = re.compile(
-        r'href="(https://www\.agimeg\.it/super-win-for-life-[^"]*)"',
-        re.IGNORECASE
-    )
-    for url in pattern2.findall(html):
-        if data_str in url:
-            return url
+        return result
 
     return None
 
 
-def fetch_extraction_for_date(data: datetime, verbose: bool = True) -> dict:
-    url = find_article_url_for_date(data)
-    if not url:
-        print(f"    ✗ Nessun articolo per {data.strftime('%d/%m/%Y')}")
-        return None
+# ==========================================
+# FETCH SISAL
+# ==========================================
+def fetch_extraction(target_date):
+    """
+    Prova a recuperare l'estrazione da Sisal.
+    """
+    print(f"\n{'=' * 60}")
+    print(f"[*] Recupero estrazione del {target_date.strftime('%d/%m/%Y')}")
+    print(f"{'=' * 60}")
 
-    if verbose:
-        print(f"    → {url}")
-    html = fetch_url(url)
-    if not html:
-        return None
+    for url in SISAL_URLS:
+        print(f"[*] URL: {url}")
+        html = fetch_url(url)
+        if not html:
+            continue
 
-    parsed = parse_article(html, verbose=verbose)
-    if not parsed.get("numeri"):
-        print(f"    ✗ Parsing numeri fallito (4 strategie esaurite)")
-        return None
+        text = clean_html(html)
+        parsed = parse_extraction_from_text(text, target_date)
 
-    parsed["url"] = url
-    return parsed
+        if parsed and parsed.get("numeri"):
+            parsed["url"] = url
+            print(f"    ✓ Estrazione trovata su Sisal: concorso {parsed.get('concorso')}")
+            return parsed
+
+        print("    ✗ Numeri non trovati nella pagina.")
+        time.sleep(2)
+
+    print("[!] Sisal non raggiungibile o dati non trovati.")
+    return None
 
 
 # ==========================================
 # MERGE
 # ==========================================
 def merge_history(existing, fetched):
-    existing_keys = set()
-    for e in existing:
-        key = (e.get("data", ""), e.get("concorso"))
-        existing_keys.add(key)
+    existing_ids = {e.get("concorso") for e in existing
+                    if isinstance(e.get("concorso"), int)}
 
     new_items = []
     for e in fetched:
-        key = (e.get("data", ""), e.get("concorso"))
-        if key not in existing_keys:
+        if e.get("concorso") not in existing_ids:
             new_items.append(e)
 
     return existing + new_items, len(new_items)
@@ -298,9 +249,8 @@ def merge_history(existing, fetched):
 
 def sort_chronological(history):
     def sort_key(x):
-        d = x.get("data", "01/01/1900")
         try:
-            dt = datetime.strptime(d, "%d/%m/%Y")
+            dt = datetime.strptime(x.get("data", ""), "%d/%m/%Y")
             return (dt.year, dt.month, dt.day)
         except Exception:
             return (0, 0, 0)
@@ -311,18 +261,18 @@ def sort_chronological(history):
 # MAIN
 # ==========================================
 def main():
-    print("=== AURORA ENGINE — FETCH VINCI DRAW (AGIMEG) ===")
+    print("=== AURORA ENGINE — FETCH VINCI DRAW (SISAL) ===")
 
     backfill_days = 0
     if len(sys.argv) > 2 and sys.argv[1] == "--backfill":
         try:
             backfill_days = int(sys.argv[2])
         except ValueError:
-            print("[!] --backfill richiede un numero intero.")
+            print("[!] --backfill richiede un numero.")
             sys.exit(1)
 
     history = load_history()
-    print(f"[*] Storico attuale: {len(history)} estrazioni.")
+    print(f"[*] Storico attuale: {len(history)} estrazioni")
 
     fetched = []
     today = datetime.now()
@@ -331,20 +281,18 @@ def main():
         print(f"[*] Backfill: ultimi {backfill_days} giorni")
         for i in range(backfill_days):
             data = today - timedelta(days=i)
-            print(f"[*] Giorno {i+1}/{backfill_days}: {data.strftime('%d/%m/%Y')}")
-            extracted = fetch_extraction_for_date(data, verbose=True)
+            extracted = fetch_extraction(data)
             if extracted:
                 fetched.append(extracted)
-                print(f"    ✓ Concorso {extracted.get('concorso')} "
-                      f"({extracted.get('data')}): {extracted['numeri']}")
+                print(f"    ✓ Concorso {extracted.get('concorso')}: "
+                      f"{extracted['numeri']}")
             time.sleep(2)
     else:
-        print(f"[*] Recupero oggi: {today.strftime('%d/%m/%Y')}")
-        extracted = fetch_extraction_for_date(today, verbose=True)
+        extracted = fetch_extraction(today)
         if extracted:
             fetched.append(extracted)
-            print(f"    ✓ Concorso {extracted.get('concorso')} "
-                  f"({extracted.get('data')}): {extracted['numeri']}")
+            print(f"    ✓ Concorso {extracted.get('concorso')}: "
+                  f"{extracted['numeri']}")
 
     if not fetched:
         print("[!] Nessuna estrazione recuperata.")
@@ -356,11 +304,9 @@ def main():
     if added > 0:
         merged = sort_chronological(merged)
         save_history(merged)
-        print(f"[+] Aggiunte {added} nuove estrazioni. Totale: {len(merged)}")
+        print(f"[+] Aggiunte {added} nuove. Totale: {len(merged)}")
     else:
-        print("[*] Nessuna nuova estrazione. Storico invariato.")
-
-    print("=== COMPLETATO ===")
+        print("[*] Nessuna nuova estrazione.")
 
 
 if __name__ == "__main__":
