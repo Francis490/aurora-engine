@@ -2,11 +2,26 @@ name: Aurora Engine — Daily Sync
 
 on:
   schedule:
+    # 21:30 italiane (estate CEST, UTC+2) = 19:30 UTC
+    # In inverno (CET, UTC+1) girerà alle 20:30 italiane
+    # Super Win for Life estrae alle 20:00 italiane, risultati online entro ~21:00
     - cron: '30 19 * * *'
   workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Forza esecuzione anche se ci sono errori nel fetch'
+        required: false
+        default: 'true'
+        type: string
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: aurora-sync-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run-aurora:
@@ -46,11 +61,13 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           for file in vinci_history.json vinci_database.json vinci_played.json vinci_bankroll.json; do
             if [ -f "$file" ]; then
               git add "$file"
             fi
           done
+
           if git diff --cached --quiet; then
             echo "Nessuna modifica da salvare."
           else
@@ -58,3 +75,13 @@ jobs:
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+
+      - name: Upload artifact log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurora-logs-${{ github.run_number }}
+          path: |
+            vinci_database.json
+          retention-days: 30
+          if-no-files-found: ignore
