@@ -2,9 +2,10 @@ name: Aurora Engine — Daily Sync
 
 on:
   schedule:
-    # Ogni giorno alle 22:00 italiane (20:00 UTC in estate, 21:00 UTC in inverno)
+    # 21:30 italiane (estate CEST, UTC+2) = 19:30 UTC
+    # In inverno (CET, UTC+1) girerà alle 20:30 italiane
     # Super Win for Life estrae alle 20:00 italiane, risultati online entro ~21:00
-    - cron: '0 20 * * *'
+    - cron: '30 19 * * *'
   workflow_dispatch:
     inputs:
       force_run:
@@ -46,7 +47,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Fetch estrazione da AGIMEG
+      - name: Fetch estrazione da Sisal
         run: python fetch_vinci_draw.py
         continue-on-error: true
 
@@ -58,7 +59,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          for file in vinci_history.json vinci_database.json vinci_played.json vinci_bankroll.json backtest_report.txt backtest_results.json; do
+          for file in vinci_history.json vinci_database.json vinci_played.json vinci_bankroll.json; do
             if [ -f "$file" ]; then
               git add "$file"
             fi
@@ -79,6 +80,5 @@ jobs:
           name: aurora-logs-${{ github.run_number }}
           path: |
             vinci_database.json
-            backtest_report.txt
           retention-days: 30
           if-no-files-found: ignore
