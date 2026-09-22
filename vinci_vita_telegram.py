@@ -1,18 +1,8 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v3 — Bot Telegram sender.
+AURORA ENGINE v3.3 — Bot Telegram sender.
 
-Esegue l'engine v3, formatta il report e lo invia su Telegram.
-Registra le giocate in vinci_played.json per il tracking.
-
-FIX (2026-09-22):
-- Titolo report: "AURORA ENGINE v3"
-- Aggiunto "Share €X" nella riga sestina (da expected_share_eur)
-- Footer aggiornato a v3
-
-Uso:
-    python vinci_vita_telegram.py            # esegue engine + invia report
-    python vinci_vita_telegram.py --quiet    # senza log verbosi
+Esegue l'engine v3.3, formatta il report e lo invia su Telegram.
 """
 import json
 import os
@@ -25,20 +15,13 @@ from datetime import datetime
 
 PLAYED_FILE = "vinci_played.json"
 
-# Limiti Telegram
-TELEGRAM_CAPTION_LIMIT = 1024
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
 
 
-# ==========================================
-# INVIO TELEGRAM
-# ==========================================
 def send_telegram_message(text, parse_mode="HTML"):
-    """Invia un messaggio testuale. Ritorna True se successo."""
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-
     if not bot_token or not chat_id:
         print("[!] Token/chat_id mancanti. Invio saltato.")
         return False
@@ -68,7 +51,6 @@ def send_telegram_message(text, parse_mode="HTML"):
 
 
 def send_telegram_report_smart(text):
-    """Invia il report. Se > soglia, splitta in 2 messaggi."""
     if len(text) <= TELEGRAM_SPLIT_THRESHOLD:
         return send_telegram_message(text)
 
@@ -80,17 +62,13 @@ def send_telegram_report_smart(text):
     part1 = text[:split_pos].rstrip()
     part2 = text[split_pos:].lstrip()
 
-    print(f"[*] Report splittato: parte 1 ({len(part1)} char), "
-          f"parte 2 ({len(part2)} char)")
+    print(f"[*] Report splittato: parte 1 ({len(part1)} char), parte 2 ({len(part2)} char)")
 
     ok1 = send_telegram_message(part1)
     ok2 = send_telegram_message(part2)
     return ok1 and ok2
 
 
-# ==========================================
-# TRACKING GIOCATE
-# ==========================================
 def load_played():
     if os.path.exists(PLAYED_FILE):
         try:
@@ -111,7 +89,6 @@ def save_played(data):
 
 
 def record_play_in_file(payload):
-    """Registra la giocata corrente in vinci_played.json."""
     played = load_played()
     sestinas = payload.get("sestinas", [])
     if not sestinas:
@@ -137,40 +114,42 @@ def record_play_in_file(payload):
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v3 — {len(sestinas)} sestine",
+        "note": f"Aurora Engine v3.3 — {len(sestinas)} sestine",
     })
 
     save_played(played)
     print(f"[+] Registrato concorso {concorso} in {PLAYED_FILE}")
 
 
-# ==========================================
-# FORMATTAZIONE REPORT (HTML)
-# ==========================================
 def format_telegram_report(payload):
-    """Formatta il payload in HTML per Telegram."""
     if not payload:
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v3</b>")
+    lines.append("🌅 <b>AURORA ENGINE v3.3</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
-    # Rendita
     rendita = payload.get("rendita_mensile", 0)
     va = payload.get("valore_attuale_rendita", 0)
     lines.append(f"💎 Rendita: <b>€ {rendita:,}/mese</b>")
     lines.append(f"   Valore attuale: € {va:,.0f}")
     lines.append("")
 
-    # Regime
+    if payload.get("bias_analysis"):
+        ba = payload["bias_analysis"]
+        lines.append(f"🧪 {ba.get('health', 'N/A')}")
+        if ba.get("hot_numbers"):
+            lines.append(f"   Hot: {ba['hot_numbers']}")
+        if ba.get("cold_numbers"):
+            lines.append(f"   Cold: {ba['cold_numbers']}")
+        lines.append("")
+
     if payload.get("regime_report"):
         h = payload["regime_report"]["health"]
         lines.append(f"🔬 {h}")
         lines.append("")
 
-    # Bankroll
     if payload.get("bankroll_state"):
         bs = payload["bankroll_state"]
         lines.append(f"💰 <b>Bankroll:</b> €{bs['bankroll']:.2f} "
@@ -181,13 +160,11 @@ def format_telegram_report(payload):
             lines.append(f"   ⚠️ <b>STOP ATTIVO</b> fino al {bs.get('stop_until')}")
         lines.append("")
 
-    # Prossima
     nd = payload.get("next_draw", {})
     lines.append(f"🎯 <b>PROSSIMA: Concorso N° {nd.get('concorso')}</b>")
     lines.append(f"   {nd.get('data')} · ore {nd.get('ora', '20:00')}")
     lines.append("")
 
-    # Ultima
     ld = payload.get("last_draw", {})
     if ld.get("numeri"):
         ns = " · ".join(str(n).zfill(2) for n in ld["numeri"])
@@ -195,21 +172,18 @@ def format_telegram_report(payload):
         lines.append(f"   <code>{ns}</code>")
         lines.append("")
 
-    # Budget
     bm = payload.get("budget_mode", {})
     lines.append(f"🎛️ <b>BUDGET: {bm.get('mode', 'N/A')}</b>")
     if bm.get("msg"):
         lines.append(f"   {bm['msg']}")
     lines.append("")
 
-    # EV
     if payload.get("ev"):
         ev = payload["ev"]
         lines.append(f"⚡ <b>EV:</b> €{ev['ev_netto']:+.4f} "
                      f"({ev['ev_percentuale']:+.2f}%)")
         lines.append("")
 
-    # Sestine (con share)
     sestinas = payload.get("sestinas", [])
     if sestinas:
         costo = payload.get("costo_totale", 0)
@@ -218,68 +192,56 @@ def format_telegram_report(payload):
         for i, s in enumerate(sestinas):
             e = emojis[i] if i < len(emojis) else f"{i+1}."
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
-            lines.append(f"   {e} <code>[{ns}]</code>")
+            profilo = s.get("profilo", "?")
+            lines.append(f"   {e} <b>[{profilo}]</b>")
+            lines.append(f"      <code>[{ns}]</code>")
 
-            # Riga metriche
             metric_parts = [
                 f"Somma {s['somma']}",
                 f"ACv3 {s['anti_crowd_score']:.2f}",
             ]
 
-            # FIX: aggiungi share se presente
             share = s.get("expected_share_eur")
             if share is not None:
                 metric_parts.append(f"Share €{share:,.0f}")
 
-            metric_parts.append(f"score {s.get('composite_score', 0):.3f}")
-
             lines.append("      " + " · ".join(metric_parts))
+
+        if payload.get("portfolio_coverage"):
+            lines.append("")
+            lines.append(f"📊 Coverage: {payload['portfolio_coverage']:.3f}")
+
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b> — Nessuna sestina")
         lines.append("")
 
-    # Portfolio metrics
-    if payload.get("portfolio_metrics"):
-        pm = payload["portfolio_metrics"]
-        lines.append(f"📊 <b>Portfolio:</b> "
-                     f"corr {pm['correlation']:.3f} (↓ meglio) · "
-                     f"diversity {pm['diversity']:.3f}")
-        lines.append("")
-
-    lines.append("🌅 <i>Aurora Engine v3 — Super Win for Life</i>")
+    lines.append("🌅 <i>Aurora Engine v3.3 — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     return "\n".join(lines)
 
 
-# ==========================================
-# MAIN
-# ==========================================
 def main():
-    parser = argparse.ArgumentParser(description="Aurora Engine Telegram Bot")
-    parser.add_argument("--quiet", action="store_true", help="Meno log")
-    parser.add_argument("--no-record", action="store_true",
-                        help="Non registrare in vinci_played.json")
-    parser.add_argument("--test", action="store_true",
-                        help="Invia solo un messaggio di test")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--no-record", action="store_true")
+    parser.add_argument("--test", action="store_true")
     args = parser.parse_args()
 
-    # Modalità test
     if args.test:
         msg = ("🌅 <b>Aurora Engine — TEST</b>\n"
                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-               "✅ Bot configurato correttamente!\n"
-               "Il sistema è pronto per inviare report.")
+               "✅ Bot configurato correttamente!")
         send_telegram_message(msg)
         return
 
     print("=" * 65)
-    print("AURORA ENGINE v3 — TELEGRAM DISPATCH")
+    print("AURORA ENGINE v3.3 — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
-        from vinci_vita_engine import run_engine, format_report
+        from vinci_vita_engine import run_engine
     except ImportError as e:
         print(f"[!] Errore import engine: {e}")
         sys.exit(1)
@@ -288,14 +250,11 @@ def main():
 
     if not payload:
         print("[!] Payload vuoto.")
-        send_telegram_message("⚠️ Aurora Engine: pipeline vuota.")
         sys.exit(1)
 
-    # Registra giocata
     if not args.no_record:
         record_play_in_file(payload)
 
-    # Formatta e invia
     report = format_telegram_report(payload)
 
     if not args.quiet:
