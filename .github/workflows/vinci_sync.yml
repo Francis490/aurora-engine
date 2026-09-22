@@ -4,20 +4,11 @@ on:
   schedule:
     # 21:30 italiane (estate CEST, UTC+2) = 19:30 UTC
     # In inverno (CET, UTC+1) girerà alle 20:30 italiane
-    # Super Win for Life estrae alle 20:00 italiane, risultati online entro ~21:00
     - cron: '30 19 * * *'
   workflow_dispatch:
-    inputs:
-      force_run:
-        description: 'Forza esecuzione anche se ci sono errori nel fetch'
-        required: false
-        default: 'true'
-        type: string
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: aurora-sync-${{ github.ref }}
@@ -47,10 +38,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright browser
-        run: playwright install chromium
-
-      - name: Fetch estrazione da Sisal
+      - name: Fetch estrazione da AGIMEG
         run: python fetch_vinci_draw.py
         continue-on-error: true
 
