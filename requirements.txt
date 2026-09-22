@@ -13,5 +13,6 @@ matplotlib==3.8.3
 # --- Generazione icone PWA ---
 Pillow==10.3.0
 
-# --- Browser automation per superare Cloudflare ---
-playwright==1.45.0
+# --- HTTP + parsing HTML (AGIMEG) ---
+requests==2.31.0
+beautifulsoup4==4.12.3
