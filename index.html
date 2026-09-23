@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aurora Engine — Analisi quantitativa Super Win for Life">
+    <meta name="theme-color" content="#1a0b2e">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Aurora Engine">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <title>Aurora Engine — Super Win for Life</title>
+
+    <style>
+        :root {
+            --space: #1a0b2e;
+            --space-2: #2a1247;
+            --card: rgba(42, 18, 71, 0.75);
+            --card-inner: rgba(26, 11, 46, 0.6);
+            --aurora-purple: #8b3ce0;
+            --aurora-pink: #c850c0;
+            --aurora-cyan: #06b6d4;
+            --solar: #fbbf24;
+            --solar-bright: #fde68a;
+            --text: #f5ebff;
+            --text-dim: #b8a6d9;
+            --border: rgba(139, 60, 224, 0.25);
+            --border-soft: rgba(139, 60, 224, 0.1);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: var(--space);
+            color: var(--text);
+            font-family: 'Space Grotesk', -apple-system, sans-serif;
+            padding: 1.5rem 1rem 3rem;
+            line-height: 1.5;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* AURORA BACKGROUND */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 50%; left: 50%;
+            width: 200vmax; height: 200vmax;
+            margin: -100vmax 0 0 -100vmax;
+            background: conic-gradient(
+                from 0deg,
+                rgba(139, 60, 224, 0.1),
+                rgba(200, 80, 192, 0.08),
+                rgba(6, 182, 212, 0.06),
+                rgba(251, 191, 36, 0.08),
+                rgba(139, 60, 224, 0.1)
+            );
+            animation: rotate 120s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(80px);
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center, transparent 0%, rgba(26, 11, 46, 0.9) 70%),
+                radial-gradient(circle at 20% 30%, rgba(139, 60, 224, 0.15), transparent 45%),
+                radial-gradient(circle at 80% 70%, rgba(251, 191, 36, 0.1), transparent 45%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* HEADER */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 0 2rem;
+        }
+
+        .aurora-logo {
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5)); }
+            50% { filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.9)); }
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            background: linear-gradient(90deg, var(--aurora-purple), var(--solar), var(--aurora-pink));
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shimmer 5s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .tagline {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            letter-spacing: 0.1em;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.15); }
+        }
+
+        /* CARDS */
+        .stat-card, .aurora-card, .bias-card, .sestina-card {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before, .aurora-card::before, .sestina-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--aurora-purple), transparent);
+            opacity: 0.6;
+        }
+
+        /* STATS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            padding: 1.4rem 1.2rem;
+            text-align: center;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--solar);
+        }
+
+        .stat-card .label {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--solar);
+            margin-top: 0.4rem;
+        }
+
+        .stat-card .sub {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 0.3rem;
+        }
+
+        /* SECTION TITLE */
+        .section-title {
+            color: var(--aurora-pink);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.9rem;
+            margin-top: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .section-title::before {
+            content: "";
+            width: 20px;
+            height: 1px;
+            background: var(--aurora-pink);
+            opacity: 0.6;
+        }
+
+        /* BALLS */
+        .balls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            justify-content: center;
+            align-items: center;
+            padding: 1.3rem 1rem;
+            margin-bottom: 1.5rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .ball {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(139, 60, 224, 0.3), rgba(26, 11, 46, 0.9));
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1rem;
+            border: 1px solid rgba(139, 60, 224, 0.5);
+            box-shadow: 0 0 12px rgba(139, 60, 224, 0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .ball:hover { transform: scale(1.08); }
+
+        .ball.solar {
+            border-color: var(--solar);
+            color: var(--solar);
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.3);
+        }
+
+        /* SESTINE CARDS */
+        .sestina-card {
+            padding: 1.3rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--aurora-purple);
+            transition: transform 0.3s ease;
+        }
+
+        .sestina-card:hover { transform: translateX(3px); }
+
+        .sestina-card.profile-A_trend { border-left-color: var(--aurora-purple); }
+        .sestina-card.profile-B_contrarian { border-left-color: var(--solar); }
+        .sestina-card.profile-C_coverage { border-left-color: var(--aurora-cyan); }
+
+        .sestina-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.9rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .sestina-profile {
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .profile-A_trend .sestina-profile { color: var(--aurora-purple); }
+        .profile-B_contrarian .sestina-profile { color: var(--solar); }
+        .profile-C_coverage .sestina-profile { color: var(--aurora-cyan); }
+
+        .sestina-ac {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--solar);
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            background: rgba(251, 191, 36, 0.1);
+            border-radius: 9999px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .sestina-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .sestina-numbers .n {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--card-inner);
+            border: 1px solid var(--border-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .sestina-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem 1rem;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            padding: 0.6rem 0.8rem;
+            background: var(--card-inner);
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+        }
+
+        .sestina-metrics strong {
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* BIAS CARD */
+        .bias-card {
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--success);
+        }
+
+        .bias-card.warn { border-left-color: var(--warning); }
+        .bias-card.danger { border-left-color: var(--danger); }
+
+        .bias-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .bias-body {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .bias-body strong { color: var(--text); }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-soft);
+            letter-spacing: 0.1em;
+        }
+
+        footer .vx-mark {
+            display: inline-block;
+            color: var(--solar);
+            font-weight: 700;
+            letter-spacing: 0.2em;
+        }
+
+        /* ERROR */
+        .error-msg {
+            color: #f87171;
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 1rem;
+            border: 1px solid rgba(248, 113, 113, 0.4);
+            background: rgba(248, 113, 113, 0.08);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <header>
+        <div class="aurora-logo">
+            <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#fde68a"/>
+                        <stop offset="60%" stop-color="#fbbf24"/>
+                        <stop offset="100%" stop-color="#d97706"/>
+                    </radialGradient>
+                    <linearGradient id="aurora" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#8b3ce0"/>
+                        <stop offset="50%" stop-color="#c850c0"/>
+                        <stop offset="100%" stop-color="#06b6d4"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="40" cy="40" r="14" fill="url(#sun)"/>
+                <path d="M 8 50 Q 25 30 40 50 Q 55 70 72 50" stroke="url(#aurora)" stroke-width="3" fill="none" opacity="0.8"/>
+                <path d="M 5 55 Q 22 38 40 55 Q 58 72 75 55" stroke="url(#aurora)" stroke-width="2" fill="none" opacity="0.5"/>
+                <path d="M 12 45 Q 26 28 40 45 Q 54 62 68 45" stroke="url(#aurora)" stroke-width="2" fill="none" opacity="0.6"/>
+            </svg>
+        </div>
+        <h1>AURORA ENGINE</h1>
+        <div class="tagline">Super Win for Life</div>
+        <div class="status-badge" id="statusBadge">⚡ SISTEMA OPERATIVO</div>
+    </header>
+
+    <div id="errorBox" class="error-msg"></div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Rendita Mensile</div>
+            <div class="value" id="renditaMensile">—</div>
+            <div class="sub">in palio</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Valore Attuale</div>
+            <div class="value" id="valoreAttuale" style="color: var(--aurora-pink);">—</div>
+            <div class="sub">20 anni, tasso 2%</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Bankroll</div>
+            <div class="value" id="bankrollValue" style="color: var(--success);">—</div>
+            <div class="sub" id="bankrollSub">—</div>
+        </div>
+    </div>
+
+    <!-- BIAS -->
+    <div class="section-title">Analisi Bias</div>
+    <div class="bias-card" id="biasCard">
+        <div class="bias-title" id="biasTitle">—</div>
+        <div class="bias-body" id="biasBody">—</div>
+    </div>
+
+    <!-- PROSSIMA ESTRAZIONE -->
+    <div class="section-title">Prossima Estrazione</div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Concorso</div>
+            <div class="value" id="nextContest" style="color: var(--aurora-pink);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Data</div>
+            <div class="value" id="nextDate" style="color: var(--text);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Ora</div>
+            <div class="value" id="nextTime" style="color: var(--text);">—</div>
+        </div>
+    </div>
+
+    <!-- ULTIMA ESTRAZIONE -->
+    <div class="section-title" id="lastDrawTitle">Ultima Estrazione</div>
+    <div class="balls-row" id="lastDrawBalls"></div>
+
+    <!-- SESTINE -->
+    <div class="section-title" id="sestineTitle">Sestine Multi-Profilo</div>
+    <div id="sestineGrid"></div>
+
+    <!-- FOOTER -->
+    <footer>
+        <p><span class="vx-mark">AURORA ENGINE</span> — Analisi Quantitativa</p>
+        <p style="margin-top: 0.5rem;">Ultima sincronizzazione: <span id="updatedAt">—</span></p>
+        <p style="margin-top: 0.5rem;">Coverage: <span id="coverage">—</span></p>
+    </footer>
+
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    var $ = function (id) { return document.getElementById(id); };
+    var pad2 = function (n) { return String(n).padStart(2, "0"); };
+
+    var AUTO_REFRESH_MS = 60 * 1000;
+    var refreshTimer = null;
+
+    function formatEuro(n) {
+        if (typeof n !== "number" || !isFinite(n)) return "—";
+        return "€ " + n.toLocaleString("it-IT");
+    }
+
+    function formatNumber(n, decimals) {
+        if (typeof n !== "number" || !isFinite(n)) return "—";
+        return n.toFixed(decimals || 2);
+    }
+
+    function showError(msg) {
+        var box = $("errorBox");
+        box.textContent = msg;
+        box.style.display = "block";
+    }
+
+    function hideError() {
+        $("errorBox").style.display = "none";
+    }
+
+    function renderLastDraw(draw) {
+        var c = $("lastDrawBalls");
+        c.innerHTML = "";
+        if (!draw) return;
+
+        if (draw.concorso && draw.data) {
+            $("lastDrawTitle").textContent = "Ultima Estrazione — Concorso N° " + draw.concorso + " · " + draw.data;
+        }
+
+        var nums = draw.numeri || [];
+        for (var i = 0; i < nums.length; i++) {
+            var d = document.createElement("div");
+            d.className = "ball";
+            d.textContent = pad2(nums[i]);
+            c.appendChild(d);
+        }
+    }
+
+    function renderSestine(sestinas) {
+        var grid = $("sestineGrid");
+        grid.innerHTML = "";
+        if (!sestinas || !sestinas.length) return;
+
+        for (var i = 0; i < sestinas.length; i++) {
+            var s = sestinas[i];
+            var card = document.createElement("div");
+            card.className = "sestina-card profile-" + (s.profilo || "A_trend");
+
+            var header = document.createElement("div");
+            header.className = "sestina-header";
+            var prof = document.createElement("span");
+            prof.className = "sestina-profile";
+            prof.textContent = s.profilo || "A_trend";
+            header.appendChild(prof);
+            var ac = document.createElement("span");
+            ac.className = "sestina-ac";
+            ac.textContent = "ACv3 " + formatNumber(s.anti_crowd_score, 2);
+            header.appendChild(ac);
+            card.appendChild(header);
+
+            var numsDiv = document.createElement("div");
+            numsDiv.className = "sestina-numbers";
+            var nums = s.numeri || [];
+            for (var j = 0; j < nums.length; j++) {
+                var n = document.createElement("div");
+                n.className = "n";
+                n.textContent = pad2(nums[j]);
+                numsDiv.appendChild(n);
+            }
+            card.appendChild(numsDiv);
+
+            var metrics = document.createElement("div");
+            metrics.className = "sestina-metrics";
+            metrics.innerHTML =
+                "<span>Somma <strong>" + (s.somma || "—") + "</strong></span>" +
+                "<span>AC <strong>" + formatNumber(s.anti_crowd_score, 2) + "</strong></span>" +
+                (s.expected_share_eur ? "<span>Share <strong>" + formatEuro(s.expected_share_eur) + "</strong></span>" : "");
+            card.appendChild(metrics);
+
+            grid.appendChild(card);
+        }
+    }
+
+    function renderBias(bias) {
+        if (!bias) return;
+        var card = $("biasCard");
+        var title = $("biasTitle");
+        var body = $("biasBody");
+
+        var health = bias.health || "—";
+        title.textContent = "🧪 " + health;
+
+        if (health.indexOf("🔴") === 0) {
+            card.className = "bias-card danger";
+        } else if (health.indexOf("🟡") === 0) {
+            card.className = "bias-card warn";
+        } else {
+            card.className = "bias-card";
+        }
+
+        var html = "";
+        if (bias.hot_numbers && bias.hot_numbers.length) {
+            html += "<div><strong>Hot:</strong> " + bias.hot_numbers.join(" · ") + "</div>";
+        }
+        if (bias.cold_numbers && bias.cold_numbers.length) {
+            html += "<div><strong>Cold:</strong> " + bias.cold_numbers.join(" · ") + "</div>";
+        }
+        if (bias.profile_weights) {
+            var w = bias.profile_weights;
+            html += "<div style='margin-top: 0.4rem;'>Pesi profili: " +
+                "A=" + formatNumber(w.A_trend, 2) + " · " +
+                "B=" + formatNumber(w.B_contrarian, 2) + " · " +
+                "C=" + formatNumber(w.C_coverage, 2) + "</div>";
+        }
+        body.innerHTML = html || "Nessun dettaglio.";
+    }
+
+    function render(data) {
+        // Stats
+        $("renditaMensile").textContent = formatEuro(data.rendita_mensile);
+        $("valoreAttuale").textContent = formatEuro(data.valore_attuale_rendita);
+
+        // Bankroll
+        var bs = data.bankroll_state || {};
+        $("bankrollValue").textContent = formatEuro(bs.bankroll || 0);
+        if (bs.roi_pct !== undefined) {
+            $("bankrollSub").textContent = "ROI " + (bs.roi_pct >= 0 ? "+" : "") + formatNumber(bs.roi_pct, 2) + "% · DD " + formatNumber(bs.drawdown_pct || 0, 2) + "%";
+        }
+
+        // Status
+        if (bs.is_stopped) {
+            $("statusBadge").textContent = "⚠️ STOP ATTIVO";
+            $("statusBadge").style.background = "rgba(245, 158, 11, 0.15)";
+            $("statusBadge").style.color = "#f59e0b";
+            $("statusBadge").style.borderColor = "rgba(245, 158, 11, 0.4)";
+        } else {
+            $("statusBadge").textContent = "⚡ SISTEMA OPERATIVO";
+        }
+
+        // Bias
+        renderBias(data.bias_analysis);
+
+        // Next draw
+        var nd = data.next_draw || {};
+        $("nextContest").textContent = nd.concorso ? "N° " + nd.concorso : "—";
+        $("nextDate").textContent = nd.data || "—";
+        $("nextTime").textContent = nd.ora || "20:00";
+
+        // Last draw
+        renderLastDraw(data.last_draw);
+
+        // Sestine
+        renderSestine(data.sestinas);
+
+        // Footer
+        $("updatedAt").textContent = data.updated_at ? data.updated_at.replace("T", " ") : "—";
+        $("coverage").textContent = data.portfolio_coverage ? formatNumber(data.portfolio_coverage, 3) : "—";
+    }
+
+    function load(silent) {
+        fetch("vinci_database.json?ts=" + Date.now(), { cache: "no-store" })
+            .then(function (res) {
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                render(data);
+                hideError();
+            })
+            .catch(function (err) {
+                if (!silent) {
+                    showError("Errore caricamento vinci_database.json: " + err.message);
+                }
+            });
+    }
+
+    function startAutoRefresh() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(function () { load(true); }, AUTO_REFRESH_MS);
+    }
+
+    function stopAutoRefresh() {
+        if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    }
+
+    document.addEventListener("visibilitychange", function () {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            load(true);
+            startAutoRefresh();
+        }
+    });
+
+    function init() {
+        load();
+        startAutoRefresh();
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("sw.js").catch(function () {});
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+
+</body>
+</html>
