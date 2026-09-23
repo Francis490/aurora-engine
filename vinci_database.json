@@ -1,6 +1,6 @@
 {
   "version": "3.3",
-  "updated_at": "2026-09-23T19:37:13",
+  "updated_at": "2026-09-23T22:43:44",
   "rendita_mensile": 13890,
   "valore_attuale_rendita": 2745692.34,
   "budget_mode": {
@@ -19,20 +19,20 @@
       "numeri": [
         11,
         14,
-        52,
         65,
         66,
+        69,
         78
       ],
-      "somma": 286,
-      "score_profilo": 2.0,
+      "somma": 303,
+      "score_profilo": 1.8333,
       "anti_crowd_score": 10.0,
       "expected_share_eur": 2729878.0,
       "fingerprint_detail": {
-        "composite": 0.2452,
-        "transition": 0.0224,
-        "cooccurrence": 0.0194,
-        "gap_pattern": 0.6059,
+        "composite": 0.2487,
+        "transition": 0.0236,
+        "cooccurrence": 0.0167,
+        "gap_pattern": 0.6213,
         "hot_cold": 0.3333
       }
     },
@@ -40,22 +40,22 @@
       "id": 2,
       "profilo": "B_contrarian",
       "numeri": [
+        16,
         27,
         30,
-        33,
         55,
-        70,
+        59,
         85
       ],
-      "somma": 300,
-      "score_profilo": 19.0,
+      "somma": 272,
+      "score_profilo": 16.8333,
       "anti_crowd_score": 10.0,
       "expected_share_eur": 2729878.0,
       "fingerprint_detail": {
-        "composite": 0.1413,
-        "transition": 0.0197,
-        "cooccurrence": 0.0086,
-        "gap_pattern": 0.5371,
+        "composite": 0.1637,
+        "transition": 0.021,
+        "cooccurrence": 0.0104,
+        "gap_pattern": 0.6233,
         "hot_cold": 0.0
       }
     },
@@ -66,36 +66,33 @@
         11,
         23,
         33,
-        46,
+        48,
         51,
         87
       ],
-      "somma": 251,
+      "somma": 253,
       "score_profilo": 9.5,
       "anti_crowd_score": 10.0,
       "expected_share_eur": 2729878.0,
       "fingerprint_detail": {
-        "composite": 0.3862,
-        "transition": 0.0119,
-        "cooccurrence": 0.0043,
-        "gap_pattern": 0.5286,
-        "hot_cold": 1.0
+        "composite": 0.306,
+        "transition": 0.0126,
+        "cooccurrence": 0.0083,
+        "gap_pattern": 0.5363,
+        "hot_cold": 0.6667
       }
     }
   ],
-  "portfolio_coverage": 0.8941,
+  "portfolio_coverage": 0.9307,
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 74.98,
+    "chi2": 71.66,
     "is_uniform": true,
     "has_hot_bias": false,
     "has_cold_bias": false,
     "has_autocorr": false,
     "hot_numbers": [
-      47,
-      17,
-      72,
-      89
+      47
     ],
     "cold_numbers": [],
     "profile_weights": {
@@ -109,31 +106,31 @@
     "ev_percentuale": -56.66
   },
   "last_draw": {
-    "concorso": 112,
-    "data": "22/09/2026",
+    "concorso": 113,
+    "data": "23/09/2026",
     "numeri": [
-      60,
-      76,
-      26,
-      18,
-      42,
-      61,
-      43,
-      49
+      4,
+      6,
+      8,
+      13,
+      19,
+      33,
+      46,
+      79
     ]
   },
   "next_draw": {
-    "concorso": 113,
-    "data": "23/09/2026",
+    "concorso": 114,
+    "data": "24/09/2026",
     "ora": "20:00"
   },
   "fingerprint_base": {
-    "n_draws": 31,
-    "sum_mean": 288.48
+    "n_draws": 32,
+    "sum_mean": 284.34
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 31
+    "n": 32
   },
   "bankroll_state": {
     "initial_bankroll": 100.0,
