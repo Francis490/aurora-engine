@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: aurora-sync-${{ github.ref }}
@@ -62,12 +64,31 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
-      - name: Upload artifact log
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Preparazione cartella sito
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          [ -f manifest.json ]  && cp manifest.json _site/manifest.json || true
+          [ -f sw.js ]          && cp sw.js _site/sw.js || true
+          [ -f icon-192.png ]   && cp icon-192.png _site/icon-192.png || true
+          [ -f icon-512.png ]   && cp icon-512.png _site/icon-512.png || true
+          [ -f vinci_database.json ] && cp vinci_database.json _site/vinci_database.json || true
+          touch _site/.nojekyll
+
+      - name: Upload artifact per GitHub Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: aurora-logs-${{ github.run_number }}
-          path: |
-            vinci_database.json
-          retention-days: 30
-          if-no-files-found: ignore
+          path: _site
+
+  deploy-pages:
+    needs: run-aurora
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
