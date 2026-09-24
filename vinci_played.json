@@ -125,6 +125,39 @@
         ]
       ],
       "note": "Aurora Engine v3.3 — 3 sestine"
+    },
+    {
+      "concorso": 115,
+      "data": "25/09/2026",
+      "giocata_il": "24/09/2026",
+      "costo_eur": 6.0,
+      "sestine": [
+        [
+          10,
+          13,
+          14,
+          65,
+          66,
+          78
+        ],
+        [
+          16,
+          27,
+          30,
+          55,
+          59,
+          70
+        ],
+        [
+          10,
+          11,
+          23,
+          33,
+          78,
+          87
+        ]
+      ],
+      "note": "Aurora Engine v3.3 — 3 sestine"
     }
   ]
 }
