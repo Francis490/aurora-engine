@@ -1,8 +1,8 @@
 {
   "version": "3.3",
-  "updated_at": "2026-09-24T20:27:09",
-  "rendita_mensile": 13910,
-  "valore_attuale_rendita": 2749645.82,
+  "updated_at": "2026-09-24T20:31:22",
+  "rendita_mensile": 13950,
+  "valore_attuale_rendita": 2757552.79,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -103,8 +103,8 @@
     }
   },
   "ev": {
-    "ev_netto": -1.133,
-    "ev_percentuale": -56.65
+    "ev_netto": -1.1326,
+    "ev_percentuale": -56.63
   },
   "last_draw": {
     "concorso": 114,
