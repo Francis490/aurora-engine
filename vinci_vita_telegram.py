@@ -1,6 +1,6 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v3.4 — Bot Telegram sender (sestina unica).
+AURORA ENGINE v3.5 — Bot Telegram sender (sestina unica).
 """
 import json
 import os
