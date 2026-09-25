@@ -1,497 +1,116 @@
 [
-  {
-    "concorso": 82,
-    "data": "23/08/2026",
-    "numeri": [
-      25,
-      29,
-      33,
-      34,
-      54,
-      55,
-      75,
-      81
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-vincita-bassano-del-grappa-23-agosto-2026/"
-  },
-  {
-    "concorso": 83,
-    "data": "24/08/2026",
-    "numeri": [
-      26,
-      35,
-      44,
-      49,
-      54,
-      64,
-      81,
-      85
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-vincita-due-punti-5-macerata-levico-terme-24-agosto-2026/"
-  },
-  {
-    "concorso": 84,
-    "data": "25/08/2026",
-    "numeri": [
-      8,
-      27,
-      33,
-      41,
-      49,
-      59,
-      60,
-      87
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-vincita-urbino-25-agosto-2026/"
-  },
-  {
-    "concorso": 85,
-    "data": "26/08/2026",
-    "numeri": [
-      24,
-      38,
-      43,
-      63,
-      72,
-      74,
-      82,
-      85
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 86,
-    "data": "27/08/2026",
-    "numeri": [
-      9,
-      16,
-      18,
-      24,
-      34,
-      47,
-      65,
-      83
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 87,
-    "data": "28/08/2026",
-    "numeri": [
-      1,
-      3,
-      5,
-      7,
-      41,
-      45,
-      46,
-      84
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 88,
-    "data": "29/08/2026",
-    "numeri": [
-      17,
-      46,
-      54,
-      68,
-      75,
-      78,
-      81,
-      83
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-super-rendita-13110-euro-estrazione-29-agosto-2026/"
-  },
-  {
-    "concorso": 89,
-    "data": "30/08/2026",
-    "numeri": [
-      8,
-      25,
-      35,
-      37,
-      72,
-      79,
-      89,
-      90
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 90,
-    "data": "31/08/2026",
-    "numeri": [
-      13,
-      25,
-      26,
-      34,
-      61,
-      70,
-      76,
-      83
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-31-agosto-2026-super-rendita-13140-euro/"
-  },
-  {
-    "concorso": 91,
-    "data": "01/09/2026",
-    "numeri": [
-      2,
-      17,
-      23,
-      53,
-      63,
-      69,
-      72,
-      85
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-1-settembre-2026-vincita-roma/"
-  },
-  {
-    "concorso": 92,
-    "data": "02/09/2026",
-    "numeri": [
-      37,
-      42,
-      43,
-      56,
-      67,
-      73,
-      84,
-      87
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-2-settembre-2026-super-rendita/"
-  },
-  {
-    "concorso": 93,
-    "data": "03/09/2026",
-    "numeri": [
-      8,
-      15,
-      34,
-      37,
-      42,
-      47,
-      72,
-      74
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-3-settembre-2026-super-rendita-13260-euro/"
-  },
-  {
-    "concorso": 94,
-    "data": "04/09/2026",
-    "numeri": [
-      17,
-      18,
-      20,
-      24,
-      50,
-      61,
-      70,
-      83
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-4-settembre-2026-super-rendita-13290-euro/"
-  },
-  {
-    "concorso": 95,
-    "data": "05/09/2026",
-    "numeri": [
-      27,
-      30,
-      57,
-      60,
-      69,
-      72,
-      80,
-      82
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-5-settembre-2026-vincite-rendita-13350-euro/"
-  },
-  {
-    "concorso": 96,
-    "data": "06/09/2026",
-    "numeri": [
-      11,
-      14,
-      19,
-      27,
-      30,
-      47,
-      59,
-      76
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-estrazione-6-settembre-2026-numeri-e-premi-super-rendita-a-13340-euro/"
-  },
-  {
-    "concorso": 97,
-    "data": "07/09/2026",
-    "numeri": [
-      17,
-      24,
-      49,
-      55,
-      61,
-      63,
-      67,
-      84
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 98,
-    "data": "08/09/2026",
-    "numeri": [
-      21,
-      28,
-      39,
-      43,
-      47,
-      59,
-      79,
-      89
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 99,
-    "data": "09/09/2026",
-    "numeri": [
-      4,
-      15,
-      16,
-      45,
-      47,
-      84,
-      86,
-      89
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 100,
-    "data": "10/09/2026",
-    "numeri": [
-      12,
-      32,
-      48,
-      50,
-      51,
-      75,
-      77,
-      82
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-10-settembre-2026-san-giuliano-milanese-vincita-15618-euro/"
-  },
-  {
-    "concorso": 101,
-    "data": "11/09/2026",
-    "numeri": [
-      17,
-      29,
-      40,
-      41,
-      45,
-      48,
-      51,
-      54
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-11-settembre-2026-vincite-super-rendita-13540-euro/"
-  },
-  {
-    "concorso": 102,
-    "data": "12/09/2026",
-    "numeri": [
-      3,
-      15,
-      35,
-      39,
-      41,
-      54,
-      62,
-      68
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-vincita-lonigo-18708-euro-12-settembre-2026/"
-  },
-  {
-    "concorso": 103,
-    "data": "13/09/2026",
-    "numeri": [
-      25,
-      46,
-      52,
-      66,
-      68,
-      73,
-      75,
-      81
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-13-settembre-2026-vincite-quote-concorso-103/"
-  },
-  {
-    "concorso": 104,
-    "data": "14/09/2026",
-    "numeri": [
-      11,
-      14,
-      18,
-      29,
-      43,
-      50,
-      66,
-      82
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-14-settembre-2026-vincite-super-rendita-13620-euro/"
-  },
-  {
-    "concorso": 105,
-    "data": "15/09/2026",
-    "numeri": [
-      5,
-      10,
-      37,
-      56,
-      65,
-      67,
-      69,
-      78
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-15-settembre-2026-vincite-super-rendita-13660/"
-  },
-  {
-    "concorso": 106,
-    "data": "16/09/2026",
-    "numeri": [
-      4,
-      14,
-      29,
-      39,
-      49,
-      52,
-      78,
-      89
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-16-settembre-2026-vincite-super-rendita-13690/"
-  },
-  {
-    "concorso": 107,
-    "data": "17/09/2026",
-    "numeri": [
-      3,
-      6,
-      45,
-      47,
-      50,
-      51,
-      72,
-      86
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-17-settembre-2026-vincite-super-rendita-13730/"
-  },
-  {
-    "concorso": 108,
-    "data": "18/09/2026",
-    "numeri": [
-      8,
-      15,
-      20,
-      22,
-      38,
-      41,
-      66,
-      89
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-18-settembre-2026-vincite-super-rendita-13760/"
-  },
-  {
-    "concorso": 109,
-    "data": "19/09/2026",
-    "numeri": [
-      5,
-      8,
-      17,
-      34,
-      48,
-      65,
-      80,
-      89
-    ],
-    "url": "https://www.agimeg.it/super-win-for-life-19-settembre-2026-estrazione-quote/"
-  },
-  {
-    "concorso": 110,
-    "data": "20/09/2026",
-    "numeri": [
-      7,
-      9,
-      28,
-      63,
-      71,
-      74,
-      76,
-      82
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 111,
-    "data": "21/09/2026",
-    "numeri": [
-      23,
-      42,
-      47,
-      60,
-      69,
-      71,
-      87,
-      88
-    ],
-    "url": "https://www.sisal.it/super-win-for-life"
-  },
-  {
-    "concorso": 112,
-    "data": "22/09/2026",
-    "numeri": [
-      60,
-      76,
-      26,
-      18,
-      42,
-      61,
-      43,
-      49
-    ],
-    "url": "manual-update"
-  },
-  {
-    "concorso": 113,
-    "data": "23/09/2026",
-    "numeri": [
-      4,
-      6,
-      8,
-      13,
-      19,
-      33,
-      46,
-      79
-    ],
-    "url": "manual-update"
-  },
-  {
-    "concorso": 114,
-    "data": "24/09/2026",
-    "numeri": [
-      10,
-      17,
-      26,
-      39,
-      41,
-      54,
-      63,
-      85
-    ],
-    "url": "manual-update"
-  }
+  {"concorso": 1, "data": "03/06/2026", "numeri": [17, 21, 28, 40, 42, 43, 48, 76], "url": "manual-import"},
+  {"concorso": 2, "data": "04/06/2026", "numeri": [20, 22, 23, 25, 30, 42, 49, 87], "url": "manual-import"},
+  {"concorso": 3, "data": "05/06/2026", "numeri": [10, 16, 21, 48, 52, 68, 72, 90], "url": "manual-import"},
+  {"concorso": 4, "data": "06/06/2026", "numeri": [7, 11, 28, 49, 51, 55, 78, 88], "url": "manual-import"},
+  {"concorso": 5, "data": "07/06/2026", "numeri": [18, 26, 27, 61, 68, 70, 74, 82], "url": "manual-import"},
+  {"concorso": 6, "data": "08/06/2026", "numeri": [5, 13, 24, 38, 74, 75, 80, 89], "url": "manual-import"},
+  {"concorso": 7, "data": "09/06/2026", "numeri": [6, 36, 37, 45, 74, 82, 84, 88], "url": "manual-import"},
+  {"concorso": 8, "data": "10/06/2026", "numeri": [7, 14, 19, 33, 52, 61, 62, 74], "url": "manual-import"},
+  {"concorso": 9, "data": "11/06/2026", "numeri": [1, 3, 7, 11, 15, 25, 34, 63], "url": "manual-import"},
+  {"concorso": 10, "data": "12/06/2026", "numeri": [20, 29, 40, 41, 47, 57, 58, 64], "url": "manual-import"},
+  {"concorso": 11, "data": "13/06/2026", "numeri": [18, 29, 40, 47, 53, 55, 64, 68], "url": "manual-import"},
+  {"concorso": 12, "data": "14/06/2026", "numeri": [23, 44, 45, 51, 53, 57, 76, 89], "url": "manual-import"},
+  {"concorso": 13, "data": "15/06/2026", "numeri": [12, 15, 21, 28, 29, 36, 48, 68], "url": "manual-import"},
+  {"concorso": 14, "data": "16/06/2026", "numeri": [3, 22, 26, 32, 37, 59, 68, 76], "url": "manual-import"},
+  {"concorso": 15, "data": "17/06/2026", "numeri": [8, 29, 61, 68, 73, 76, 78, 88], "url": "manual-import"},
+  {"concorso": 16, "data": "18/06/2026", "numeri": [2, 3, 18, 21, 43, 46, 67, 69], "url": "manual-import"},
+  {"concorso": 17, "data": "19/06/2026", "numeri": [6, 14, 15, 17, 30, 49, 56, 60], "url": "manual-import"},
+  {"concorso": 18, "data": "20/06/2026", "numeri": [16, 34, 36, 49, 56, 67, 72, 82], "url": "manual-import"},
+  {"concorso": 19, "data": "21/06/2026", "numeri": [9, 11, 14, 47, 50, 53, 86, 87], "url": "manual-import"},
+  {"concorso": 20, "data": "22/06/2026", "numeri": [17, 28, 44, 54, 56, 69, 73, 90], "url": "manual-import"},
+  {"concorso": 21, "data": "23/06/2026", "numeri": [9, 15, 43, 52, 60, 77, 82, 88], "url": "manual-import"},
+  {"concorso": 22, "data": "24/06/2026", "numeri": [12, 13, 34, 45, 52, 54, 69, 70], "url": "manual-import"},
+  {"concorso": 23, "data": "25/06/2026", "numeri": [6, 12, 17, 39, 67, 69, 70, 76], "url": "manual-import"},
+  {"concorso": 24, "data": "26/06/2026", "numeri": [25, 36, 51, 53, 62, 69, 80, 86], "url": "manual-import"},
+  {"concorso": 25, "data": "27/06/2026", "numeri": [22, 43, 54, 64, 66, 78, 89, 90], "url": "manual-import"},
+  {"concorso": 26, "data": "28/06/2026", "numeri": [2, 16, 18, 23, 41, 56, 74, 78], "url": "manual-import"},
+  {"concorso": 27, "data": "29/06/2026", "numeri": [34, 42, 44, 55, 58, 67, 82, 84], "url": "manual-import"},
+  {"concorso": 28, "data": "30/06/2026", "numeri": [7, 10, 27, 36, 47, 57, 62, 69], "url": "manual-import"},
+  {"concorso": 29, "data": "01/07/2026", "numeri": [13, 31, 38, 46, 49, 57, 86, 88], "url": "manual-import"},
+  {"concorso": 30, "data": "02/07/2026", "numeri": [1, 9, 11, 21, 31, 63, 71, 88], "url": "manual-import"},
+  {"concorso": 31, "data": "03/07/2026", "numeri": [4, 16, 18, 23, 32, 41, 43, 72], "url": "manual-import"},
+  {"concorso": 32, "data": "04/07/2026", "numeri": [1, 14, 34, 45, 49, 55, 62, 88], "url": "manual-import"},
+  {"concorso": 33, "data": "05/07/2026", "numeri": [3, 19, 21, 31, 54, 60, 62, 73], "url": "manual-import"},
+  {"concorso": 34, "data": "06/07/2026", "numeri": [16, 21, 31, 35, 36, 40, 84, 90], "url": "manual-import"},
+  {"concorso": 35, "data": "07/07/2026", "numeri": [7, 19, 27, 36, 41, 47, 56, 69], "url": "manual-import"},
+  {"concorso": 36, "data": "08/07/2026", "numeri": [17, 32, 44, 60, 72, 77, 80, 83], "url": "manual-import"},
+  {"concorso": 37, "data": "09/07/2026", "numeri": [1, 5, 11, 18, 52, 71, 78, 80], "url": "manual-import"},
+  {"concorso": 38, "data": "10/07/2026", "numeri": [1, 10, 21, 42, 45, 65, 79, 83], "url": "manual-import"},
+  {"concorso": 39, "data": "11/07/2026", "numeri": [18, 20, 21, 48, 49, 57, 65, 85], "url": "manual-import"},
+  {"concorso": 40, "data": "12/07/2026", "numeri": [3, 7, 30, 40, 51, 52, 53, 80], "url": "manual-import"},
+  {"concorso": 41, "data": "13/07/2026", "numeri": [7, 8, 36, 37, 47, 55, 70, 86], "url": "manual-import"},
+  {"concorso": 42, "data": "14/07/2026", "numeri": [11, 15, 22, 26, 37, 69, 70, 81], "url": "manual-import"},
+  {"concorso": 43, "data": "15/07/2026", "numeri": [2, 3, 6, 7, 13, 17, 54, 84], "url": "manual-import"},
+  {"concorso": 44, "data": "16/07/2026", "numeri": [2, 5, 17, 37, 45, 66, 67, 84], "url": "manual-import"},
+  {"concorso": 45, "data": "17/07/2026", "numeri": [12, 15, 18, 23, 33, 51, 82, 86], "url": "manual-import"},
+  {"concorso": 46, "data": "18/07/2026", "numeri": [1, 6, 7, 19, 28, 31, 48, 71], "url": "manual-import"},
+  {"concorso": 47, "data": "19/07/2026", "numeri": [16, 46, 56, 67, 68, 76, 82, 88], "url": "manual-import"},
+  {"concorso": 48, "data": "20/07/2026", "numeri": [2, 23, 34, 60, 68, 86, 87, 90], "url": "manual-import"},
+  {"concorso": 49, "data": "21/07/2026", "numeri": [19, 25, 36, 45, 51, 79, 80, 83], "url": "manual-import"},
+  {"concorso": 50, "data": "22/07/2026", "numeri": [11, 16, 24, 58, 74, 81, 83, 87], "url": "manual-import"},
+  {"concorso": 51, "data": "23/07/2026", "numeri": [18, 31, 45, 50, 61, 72, 80, 83], "url": "manual-import"},
+  {"concorso": 52, "data": "24/07/2026", "numeri": [8, 16, 19, 22, 23, 26, 30, 46], "url": "manual-import"},
+  {"concorso": 53, "data": "25/07/2026", "numeri": [5, 16, 29, 53, 59, 70, 85, 88], "url": "manual-import"},
+  {"concorso": 54, "data": "26/07/2026", "numeri": [1, 4, 31, 33, 50, 53, 73, 90], "url": "manual-import"},
+  {"concorso": 55, "data": "27/07/2026", "numeri": [4, 24, 49, 59, 62, 75, 84, 87], "url": "manual-import"},
+  {"concorso": 56, "data": "28/07/2026", "numeri": [5, 10, 39, 51, 52, 53, 54, 62], "url": "manual-import"},
+  {"concorso": 57, "data": "29/07/2026", "numeri": [4, 21, 22, 30, 49, 52, 79, 84], "url": "manual-import"},
+  {"concorso": 58, "data": "30/07/2026", "numeri": [9, 29, 42, 46, 47, 65, 68, 72], "url": "manual-import"},
+  {"concorso": 59, "data": "31/07/2026", "numeri": [21, 23, 33, 40, 47, 59, 73, 89], "url": "manual-import"},
+  {"concorso": 60, "data": "01/08/2026", "numeri": [9, 21, 22, 48, 64, 66, 77, 83], "url": "manual-import"},
+  {"concorso": 61, "data": "02/08/2026", "numeri": [10, 21, 25, 30, 41, 48, 82, 85], "url": "manual-import"},
+  {"concorso": 62, "data": "03/08/2026", "numeri": [6, 12, 24, 27, 48, 56, 70, 86], "url": "manual-import"},
+  {"concorso": 63, "data": "04/08/2026", "numeri": [2, 12, 14, 26, 34, 36, 38, 62], "url": "manual-import"},
+  {"concorso": 64, "data": "05/08/2026", "numeri": [20, 38, 39, 40, 49, 57, 59, 64], "url": "manual-import"},
+  {"concorso": 65, "data": "06/08/2026", "numeri": [17, 31, 32, 36, 49, 62, 67, 85], "url": "manual-import"},
+  {"concorso": 66, "data": "07/08/2026", "numeri": [13, 14, 25, 40, 45, 48, 65, 90], "url": "manual-import"},
+  {"concorso": 67, "data": "08/08/2026", "numeri": [5, 11, 39, 41, 61, 62, 71, 88], "url": "manual-import"},
+  {"concorso": 68, "data": "09/08/2026", "numeri": [1, 5, 13, 17, 42, 55, 57, 82], "url": "manual-import"},
+  {"concorso": 69, "data": "10/08/2026", "numeri": [10, 11, 14, 25, 63, 66, 76, 85], "url": "manual-import"},
+  {"concorso": 70, "data": "11/08/2026", "numeri": [4, 17, 18, 21, 23, 25, 42, 68], "url": "manual-import"},
+  {"concorso": 71, "data": "12/08/2026", "numeri": [29, 35, 36, 52, 55, 67, 69, 84], "url": "manual-import"},
+  {"concorso": 72, "data": "13/08/2026", "numeri": [12, 20, 25, 56, 62, 67, 69, 76], "url": "manual-import"},
+  {"concorso": 73, "data": "14/08/2026", "numeri": [5, 18, 24, 26, 41, 55, 61, 86], "url": "manual-import"},
+  {"concorso": 74, "data": "15/08/2026", "numeri": [15, 28, 35, 43, 59, 63, 71, 82], "url": "manual-import"},
+  {"concorso": 75, "data": "16/08/2026", "numeri": [15, 21, 25, 55, 59, 76, 77, 78], "url": "manual-import"},
+  {"concorso": 76, "data": "17/08/2026", "numeri": [10, 14, 33, 34, 37, 45, 53, 57], "url": "manual-import"},
+  {"concorso": 77, "data": "18/08/2026", "numeri": [4, 6, 10, 24, 30, 44, 58, 81], "url": "manual-import"},
+  {"concorso": 78, "data": "19/08/2026", "numeri": [1, 8, 9, 12, 15, 29, 49, 51], "url": "manual-import"},
+  {"concorso": 79, "data": "20/08/2026", "numeri": [8, 18, 22, 40, 41, 64, 75, 77], "url": "manual-import"},
+  {"concorso": 80, "data": "21/08/2026", "numeri": [6, 10, 18, 22, 39, 46, 77, 81], "url": "manual-import"},
+  {"concorso": 81, "data": "22/08/2026", "numeri": [29, 41, 42, 44, 59, 75, 83, 90], "url": "manual-import"},
+  {"concorso": 82, "data": "23/08/2026", "numeri": [25, 29, 33, 34, 54, 55, 75, 81], "url": "https://www.agimeg.it/super-win-for-life-vincita-bassano-del-grappa-23-agosto-2026/"},
+  {"concorso": 83, "data": "24/08/2026", "numeri": [26, 35, 44, 49, 54, 64, 81, 85], "url": "https://www.agimeg.it/super-win-for-life-vincita-due-punti-5-macerata-levico-terme-24-agosto-2026/"},
+  {"concorso": 84, "data": "25/08/2026", "numeri": [8, 27, 33, 41, 49, 59, 60, 87], "url": "https://www.agimeg.it/super-win-for-life-vincita-urbino-25-agosto-2026/"},
+  {"concorso": 85, "data": "26/08/2026", "numeri": [24, 38, 43, 63, 72, 74, 82, 85], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 86, "data": "27/08/2026", "numeri": [9, 16, 18, 24, 34, 47, 65, 83], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 87, "data": "28/08/2026", "numeri": [1, 3, 5, 7, 41, 45, 46, 84], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 88, "data": "29/08/2026", "numeri": [17, 46, 54, 68, 75, 78, 81, 83], "url": "https://www.agimeg.it/super-win-for-life-super-rendita-13110-euro-estrazione-29-agosto-2026/"},
+  {"concorso": 89, "data": "30/08/2026", "numeri": [8, 25, 35, 37, 72, 79, 89, 90], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 90, "data": "31/08/2026", "numeri": [13, 25, 26, 34, 61, 70, 76, 83], "url": "https://www.agimeg.it/super-win-for-life-estrazione-31-agosto-2026-super-rendita-13140-euro/"},
+  {"concorso": 91, "data": "01/09/2026", "numeri": [2, 17, 23, 53, 63, 69, 72, 85], "url": "https://www.agimeg.it/super-win-for-life-estrazione-1-settembre-2026-vincita-roma/"},
+  {"concorso": 92, "data": "02/09/2026", "numeri": [37, 42, 43, 56, 67, 73, 84, 87], "url": "https://www.agimeg.it/super-win-for-life-estrazione-2-settembre-2026-super-rendita/"},
+  {"concorso": 93, "data": "03/09/2026", "numeri": [8, 15, 34, 37, 42, 47, 72, 74], "url": "https://www.agimeg.it/super-win-for-life-estrazione-3-settembre-2026-super-rendita-13260-euro/"},
+  {"concorso": 94, "data": "04/09/2026", "numeri": [17, 18, 20, 24, 50, 61, 70, 83], "url": "https://www.agimeg.it/super-win-for-life-estrazione-4-settembre-2026-super-rendita-13290-euro/"},
+  {"concorso": 95, "data": "05/09/2026", "numeri": [27, 30, 57, 60, 69, 72, 80, 82], "url": "https://www.agimeg.it/super-win-for-life-5-settembre-2026-vincite-rendita-13350-euro/"},
+  {"concorso": 96, "data": "06/09/2026", "numeri": [11, 14, 19, 27, 30, 47, 59, 76], "url": "https://www.agimeg.it/super-win-for-life-estrazione-6-settembre-2026-numeri-e-premi-super-rendita-a-13340-euro/"},
+  {"concorso": 97, "data": "07/09/2026", "numeri": [17, 24, 49, 55, 61, 63, 67, 84], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 98, "data": "08/09/2026", "numeri": [21, 28, 39, 43, 47, 59, 79, 89], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 99, "data": "09/09/2026", "numeri": [4, 15, 16, 45, 47, 84, 86, 89], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 100, "data": "10/09/2026", "numeri": [12, 32, 48, 50, 51, 75, 77, 82], "url": "https://www.agimeg.it/super-win-for-life-10-settembre-2026-san-giuliano-milanese-vincita-15618-euro/"},
+  {"concorso": 101, "data": "11/09/2026", "numeri": [17, 29, 40, 41, 45, 48, 51, 54], "url": "https://www.agimeg.it/super-win-for-life-11-settembre-2026-vincite-super-rendita-13540-euro/"},
+  {"concorso": 102, "data": "12/09/2026", "numeri": [3, 15, 35, 39, 41, 54, 62, 68], "url": "https://www.agimeg.it/super-win-for-life-vincita-lonigo-18708-euro-12-settembre-2026/"},
+  {"concorso": 103, "data": "13/09/2026", "numeri": [25, 46, 52, 66, 68, 73, 75, 81], "url": "https://www.agimeg.it/super-win-for-life-13-settembre-2026-vincite-quote-concorso-103/"},
+  {"concorso": 104, "data": "14/09/2026", "numeri": [11, 14, 18, 29, 43, 50, 66, 82], "url": "https://www.agimeg.it/super-win-for-life-14-settembre-2026-vincite-super-rendita-13620-euro/"},
+  {"concorso": 105, "data": "15/09/2026", "numeri": [5, 10, 37, 56, 65, 67, 69, 78], "url": "https://www.agimeg.it/super-win-for-life-15-settembre-2026-vincite-super-rendita-13660/"},
+  {"concorso": 106, "data": "16/09/2026", "numeri": [4, 14, 29, 39, 49, 52, 78, 89], "url": "https://www.agimeg.it/super-win-for-life-16-settembre-2026-vincite-super-rendita-13690/"},
+  {"concorso": 107, "data": "17/09/2026", "numeri": [3, 6, 45, 47, 50, 51, 72, 86], "url": "https://www.agimeg.it/super-win-for-life-17-settembre-2026-vincite-super-rendita-13730/"},
+  {"concorso": 108, "data": "18/09/2026", "numeri": [8, 15, 20, 22, 38, 41, 66, 89], "url": "https://www.agimeg.it/super-win-for-life-18-settembre-2026-vincite-super-rendita-13760/"},
+  {"concorso": 109, "data": "19/09/2026", "numeri": [5, 8, 17, 34, 48, 65, 80, 89], "url": "https://www.agimeg.it/super-win-for-life-19-settembre-2026-estrazione-quote/"},
+  {"concorso": 110, "data": "20/09/2026", "numeri": [7, 9, 28, 63, 71, 74, 76, 82], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 111, "data": "21/09/2026", "numeri": [23, 42, 47, 60, 69, 71, 87, 88], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 112, "data": "22/09/2026", "numeri": [18, 26, 42, 43, 49, 60, 61, 76], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 113, "data": "23/09/2026", "numeri": [4, 6, 8, 13, 19, 33, 46, 79], "url": "https://www.sisal.it/super-win-for-life"},
+  {"concorso": 114, "data": "24/09/2026", "numeri": [10, 17, 26, 39, 41, 54, 63, 85], "url": "https://www.sisal.it/super-win-for-life"}
 ]
