@@ -2,10 +2,8 @@
 vinci_vita_math.py
 AURORA ENGINE — Modulo matematico Super Win for Life (Vinci per la Vita)
 
-FIX (2026-09-20):
-- Soglie budget ricalibrate per l'EV strutturale del gioco (payout 65%)
-- Il budget "MINIMO" garantisce almeno 1 sestina anche con EV molto negativo
-- SKIP riservato solo a casi anomali (EV < -1.5)
+FIX (2026-09-25):
+- Rendita aggiornata a €13.990/mese
 
 Matematica ESATTA del gioco:
 - Probabilità ipergeometriche (8 estratti da 90, 6 giocati)
@@ -165,69 +163,43 @@ def kelly_analysis(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
 
 
 # ==========================================
-# 6. SOGLIE BUDGET (RICALIBRATE v2)
+# 6. SOGLIE BUDGET
 # ==========================================
 def soglie_budget(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
     """
-    Soglie di budget per Aurora Engine, ricalibrate per l'EV strutturale
-    di Super Win for Life.
-
-    FIX (2026-09-20):
-    - EV strutturale del gioco è ~-1.13€
-    - Le soglie precedenti (SKIP < -1.10) causavano SKIP permanente
-    - Ora il budget MINIMO garantisce sempre 1 sestina (2€)
-    - SKIP riservato solo a casi anomali (dati corrotti, EV < -1.5)
+    Soglie di budget ricalibrate per l'EV strutturale del gioco.
     """
     ev_data = calcola_ev(rendita_mensile)
     ev = ev_data["ev_netto"]
 
     if ev < -1.50:
-        # Caso anomalo: dati corrotti o rendita crollata
         return {
-            "mode": "SKIP",
-            "emoji": "🚫",
-            "n_sestine": 0,
-            "costo": 0.0,
+            "mode": "SKIP", "emoji": "🚫", "n_sestine": 0, "costo": 0.0,
             "msg": "⚠️ EV anomalo. Verifica dati. Nessuna sestina.",
         }
     elif ev < -1.20:
         return {
-            "mode": "MINIMO",
-            "emoji": "🟢",
-            "n_sestine": 1,
-            "costo": 2.0,
+            "mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
             "msg": "EV molto negativo (strutturale). 1 sestina (2€).",
         }
     elif ev < -1.00:
         return {
-            "mode": "MINIMO",
-            "emoji": "🟢",
-            "n_sestine": 1,
-            "costo": 2.0,
+            "mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
             "msg": "EV negativo (strutturale). 1 sestina (2€).",
         }
     elif ev < -0.80:
         return {
-            "mode": "NORMALE",
-            "emoji": "🟡",
-            "n_sestine": 2,
-            "costo": 4.0,
+            "mode": "NORMALE", "emoji": "🟡", "n_sestine": 2, "costo": 4.0,
             "msg": "EV nella media del gioco. 2 sestine (4€).",
         }
     elif ev < -0.60:
         return {
-            "mode": "ATTACK",
-            "emoji": "🟠",
-            "n_sestine": 3,
-            "costo": 6.0,
+            "mode": "ATTACK", "emoji": "🟠", "n_sestine": 3, "costo": 6.0,
             "msg": "EV meno negativo del solito. 3 sestine (6€).",
         }
     else:
         return {
-            "mode": "ALL-IN",
-            "emoji": "🔥",
-            "n_sestine": 5,
-            "costo": 10.0,
+            "mode": "ALL-IN", "emoji": "🔥", "n_sestine": 5, "costo": 10.0,
             "msg": "EV quasi neutro! 5 sestine (10€).",
         }
 
@@ -237,7 +209,6 @@ def soglie_budget(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
 # ==========================================
 def report_matematico(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> str:
     ev = calcola_ev(rendita_mensile)
-    kelly = kelly_analysis(rendita_mensile)
     budget = soglie_budget(rendita_mensile)
 
     lines = []
@@ -256,22 +227,13 @@ def report_matematico(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> str:
         prob_str = f"1 su {p_1su:,.0f}" if p_1su and p_1su < 1e12 else "—"
         lines.append(f"  {k} punti: {c['probabilita']:.10f}  ({prob_str})")
     lines.append("")
-    lines.append("EV PER CATEGORIA:")
-    for k in range(6, 1, -1):
-        c = ev["contributi"][k]
-        lines.append(f"  {k} punti: premio €{c['premio_eur']:>12,.2f}  "
-                     f"× P = €{c['contributo_ev']:.6f}")
-    lines.append("")
-    lines.append(f"EV lordo:               € {ev['ev_lordo']:.4f}")
     lines.append(f"EV netto:               € {ev['ev_netto']:.4f}")
     lines.append(f"EV percentuale:         {ev['ev_percentuale']:+.2f}%")
     lines.append("")
-    lines.append("SOGLIE BUDGET (v2 ricalibrate):")
+    lines.append("SOGLIE BUDGET:")
     lines.append(f"  Modo: {budget['mode']} {budget.get('emoji', '')}")
     lines.append(f"  Sestine: {budget['n_sestine']}")
     lines.append(f"  Costo: € {budget['costo']:.2f}")
-    lines.append(f"  Msg: {budget['msg']}")
-    lines.append("")
     lines.append("=" * 65)
     return "\n".join(lines)
 
