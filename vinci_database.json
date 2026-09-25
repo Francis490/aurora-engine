@@ -1,8 +1,8 @@
 {
-  "version": "3.4",
-  "updated_at": "2026-09-25T19:36:00",
-  "rendita_mensile": 13950,
-  "valore_attuale_rendita": 2757552.79,
+  "version": "3.5",
+  "updated_at": "2026-09-25T21:27:37",
+  "rendita_mensile": 13990,
+  "valore_attuale_rendita": 2765459.75,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -60,8 +60,8 @@
     }
   },
   "ev": {
-    "ev_netto": -1.1326,
-    "ev_percentuale": -56.63
+    "ev_netto": -1.1323,
+    "ev_percentuale": -56.61
   },
   "last_draw": {
     "concorso": 114,
@@ -90,19 +90,5 @@
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
     "n": 114
   },
-  "bankroll_state": {
-    "initial_bankroll": 100.0,
-    "bankroll": 100.0,
-    "peak": 100.0,
-    "drawdown_pct": 0.0,
-    "total_wagered": 0.0,
-    "total_won": 0.0,
-    "balance": 0.0,
-    "n_plays": 0,
-    "n_wins": 0,
-    "win_rate_pct": 0.0,
-    "roi_pct": 0.0,
-    "is_stopped": false,
-    "stop_until": null
-  }
+  "bankroll_state": null
 }
