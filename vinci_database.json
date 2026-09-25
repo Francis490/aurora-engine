@@ -1,6 +1,6 @@
 {
   "version": "3.5",
-  "updated_at": "2026-09-25T21:27:37",
+  "updated_at": "2026-09-25T21:38:58",
   "rendita_mensile": 13990,
   "valore_attuale_rendita": 2765459.75,
   "budget_mode": {
@@ -21,26 +21,26 @@
         30,
         40,
         53,
-        57,
-        83
+        70,
+        84
       ],
-      "somma": 275,
-      "score_profilo": 7.5687,
+      "somma": 289,
+      "score_profilo": 8.15,
       "anti_crowd_score": 10.0,
       "expected_share_eur": 2729878.0,
       "fingerprint_detail": {
-        "composite": 0.1542,
-        "transition": 0.0281,
-        "cooccurrence": 0.0053,
-        "gap_pattern": 0.5836,
+        "composite": 0.1506,
+        "transition": 0.0299,
+        "cooccurrence": 0.0058,
+        "gap_pattern": 0.5666,
         "hot_cold": 0.0
       }
     }
   ],
-  "portfolio_coverage": 0.8003,
+  "portfolio_coverage": 0.8663,
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 64.58,
+    "chi2": 62.57,
     "is_uniform": true,
     "has_hot_bias": false,
     "has_cold_bias": false,
@@ -64,31 +64,31 @@
     "ev_percentuale": -56.61
   },
   "last_draw": {
-    "concorso": 114,
-    "data": "24/09/2026",
+    "concorso": 115,
+    "data": "25/09/2026",
     "numeri": [
-      10,
-      17,
-      26,
-      39,
-      41,
-      54,
-      63,
-      85
+      3,
+      29,
+      32,
+      44,
+      59,
+      66,
+      71,
+      83
     ]
   },
   "next_draw": {
-    "concorso": 115,
-    "data": "25/09/2026",
+    "concorso": 116,
+    "data": "26/09/2026",
     "ora": "20:00"
   },
   "fingerprint_base": {
-    "n_draws": 114,
-    "sum_mean": 269.09
+    "n_draws": 115,
+    "sum_mean": 269.27
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 114
+    "n": 115
   },
   "bankroll_state": null
 }
