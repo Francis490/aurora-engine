@@ -1,11 +1,6 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v3.3 — Orchestratore con Portfolio V3 + Bias Test.
-
-FIX (2026-09-23):
-- Integrato quick_bias_check
-- 3 sestine multi-profilo (A_trend, B_contrarian, C_coverage)
-- Pesi profili modulati dai bias rilevati
+AURORA ENGINE v3.4 — Orchestratore con Sestina Unificata + Bias Test.
 """
 import json
 import os
@@ -116,9 +111,9 @@ def build_pool_from_history(history, size=30):
     return sorted(set(pool))
 
 
-def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=3):
+def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     print("=" * 70)
-    print("AURORA ENGINE v3.3 — PIPELINE 3 SESTINE + BIAS TEST")
+    print("AURORA ENGINE v3.4 — PIPELINE SESTINA UNIFICATA")
     print("=" * 70)
 
     history = load_history()
@@ -187,9 +182,9 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=3):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    print(f"\n[*] Costruzione portfolio (3 profili + bias weights)...")
+    print(f"\n[*] Costruzione sestina UNIFICATA (A+B+C combinati)...")
     p3 = AuroraPortfolioV3(history)
-    portfolio_raw = p3.build(
+    portfolio_raw = p3.build_single(
         pool,
         fp_engine=fp_eng,
         crowd_model=crowd_model,
@@ -233,7 +228,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestinas=3):
         print(f"  {i}. [{item['profilo']}] {s} | somma {ssum} | ACv3 {ac_v3:.2f}")
 
     coverage = p3._portfolio_coverage([item["numeri"] for item in portfolio_raw])
-    print(f"\n[*] Coverage portafoglio: {coverage:.4f}")
+    print(f"\n[*] Coverage: {coverage:.4f}")
 
     payload = build_payload(history, sdata, budget, rendita, ev, fp,
                             regime, bs, coverage, bias_result)
@@ -264,7 +259,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "3.3",
+        "version": "3.4",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -303,7 +298,7 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v3.3 — REPORT",
+        "🌅 AURORA ENGINE v3.4 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
@@ -318,11 +313,6 @@ def format_report(payload):
             lines.append(f"   Hot: {ba['hot_numbers']}")
         if ba.get("cold_numbers"):
             lines.append(f"   Cold: {ba['cold_numbers']}")
-        if ba.get("profile_weights"):
-            w = ba["profile_weights"]
-            lines.append(f"   Pesi: A={w.get('A_trend', 1):.2f} · "
-                         f"B={w.get('B_contrarian', 1):.2f} · "
-                         f"C={w.get('C_coverage', 1):.2f}")
         lines.append("")
 
     if payload.get("regime_report"):
@@ -341,20 +331,16 @@ def format_report(payload):
         lines.append(f"📊 ULTIMA (N° {ld['concorso']}): {ns}")
         lines.append("")
     if payload["sestinas"]:
-        lines.append(f"🎲 3 SESTINE MULTI-PROFILO (€{payload['costo_totale']:.2f})")
+        lines.append(f"🎲 SESTINA UNIFICATA (€{payload['costo_totale']:.2f})")
         for s in payload["sestinas"]:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
-            lines.append(f"   [{s['profilo']}]")
-            lines.append(f"      <code>[{ns}]</code>")
-            line = f"      Somma {s['somma']} · ACv3 {s['anti_crowd_score']:.2f}"
+            lines.append(f"   <code>[{ns}]</code>")
+            line = f"   Somma {s['somma']} · ACv3 {s['anti_crowd_score']:.2f}"
             if s.get("expected_share_eur"):
                 line += f" · Share €{s['expected_share_eur']:,.0f}"
             lines.append(line)
         lines.append("")
-        if payload.get("portfolio_coverage"):
-            lines.append(f"📊 Coverage portafoglio: {payload['portfolio_coverage']:.3f}")
-            lines.append("")
-    lines.append("🌅 Aurora Engine v3.3 — Super Win for Life")
+    lines.append("🌅 Aurora Engine v3.4 — Super Win for Life")
     return "\n".join(lines)
 
 
