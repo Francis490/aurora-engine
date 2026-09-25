@@ -1,16 +1,10 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v3.2 — Portfolio 3 sestine multi-profilo.
+AURORA ENGINE v3.4 — Portfolio multi-profilo + Sestina UNIFICATA.
 
-Profili:
-- A_trend: numeri hot recenti + struttura bilanciata
-- B_contrarian: numeri cold con gap alto
-- C_coverage: anti-crowd + copertura decadi
-
-Uso:
-    from vinci_vita_portfolio_v3 import AuroraPortfolioV3
-    p3 = AuroraPortfolioV3(history)
-    portfolio = p3.build(pool, bias_weights=bias_weights)
+Modalità:
+- build_single(): genera 1 sestina ottimale (A+B+C combinati)
+- build(): genera 3 sestine separate (legacy, non usato)
 """
 import itertools
 import math
@@ -20,6 +14,11 @@ from typing import List, Dict, Tuple, Optional
 
 SUM_MIN = 240
 SUM_MAX = 310
+
+# Pesi compositi per sestina unificata
+WEIGHT_A = 0.40
+WEIGHT_B = 0.30
+WEIGHT_C = 0.30
 
 
 class AuroraPortfolioV3:
@@ -108,6 +107,60 @@ class AuroraPortfolioV3:
         ) / 2.0
         return 0.5 * unique_ratio + 0.3 * decade_ratio + 0.2 * balance
 
+    # ==========================================
+    # SESTINA UNIFICATA (1 sola)
+    # ==========================================
+    def build_single(self, pool: List[int], fp_engine=None,
+                     crowd_model=None, bias_weights: Optional[Dict] = None,
+                     verbose: bool = True) -> List[Dict]:
+        """
+        Genera UNA sola sestina ottimale combinando i 3 profili.
+        Pesi: 40% trend, 30% contrarian, 30% coverage.
+        """
+        if len(pool) < 6:
+            return []
+
+        all_combos = []
+        for combo in itertools.combinations(pool, 6):
+            ssum = sum(combo)
+            if SUM_MIN <= ssum <= SUM_MAX:
+                all_combos.append(combo)
+
+        if verbose:
+            print(f"[*] Combinazioni valide: {len(all_combos)}")
+
+        w_a = (bias_weights or {}).get("A_trend", 1.0)
+        w_b = (bias_weights or {}).get("B_contrarian", 1.0)
+        w_c = (bias_weights or {}).get("C_coverage", 1.0)
+
+        scored = []
+        for combo in all_combos:
+            s_a = self._score_trend_follower(combo) * w_a
+            s_b = self._score_contrarian(combo) * w_b
+            s_c = self._score_coverage(combo, crowd_model) * w_c
+
+            composite = WEIGHT_A * s_a + WEIGHT_B * s_b + WEIGHT_C * s_c
+            scored.append((combo, composite, s_a, s_b, s_c))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+
+        if not scored:
+            return []
+
+        best = scored[0]
+        if verbose:
+            print(f"[*] Migliore UNIFIED: {list(best[0])} (composite {best[1]:.3f})")
+            print(f"    A={best[2]:.3f} B={best[3]:.3f} C={best[4]:.3f}")
+
+        return [{
+            "profilo": "UNIFIED",
+            "numeri": list(best[0]),
+            "score_profilo": round(best[1], 4),
+        }]
+
+    # ==========================================
+    # LEGACY: 3 sestine separate
+    # ==========================================
     def build(self, pool: List[int], fp_engine=None,
               crowd_model=None, bias_weights: Optional[Dict] = None,
               verbose: bool = True) -> List[Dict]:
@@ -119,9 +172,6 @@ class AuroraPortfolioV3:
             ssum = sum(combo)
             if SUM_MIN <= ssum <= SUM_MAX:
                 all_combos.append(combo)
-
-        if verbose:
-            print(f"[*] Combinazioni valide nel pool: {len(all_combos)}")
 
         scored = {
             "A_trend": [],
@@ -138,55 +188,14 @@ class AuroraPortfolioV3:
                 w = bias_weights.get(profile, 1.0)
                 scored[profile] = [(c, s * w) for c, s in items]
 
-        best = {}
+        portfolio = []
         for profile, items in scored.items():
             items.sort(key=lambda x: x[1], reverse=True)
-            best[profile] = items[0]
-            if verbose:
-                print(f"[*] Migliore {profile}: {list(items[0][0])} (score {items[0][1]:.3f})")
-
-        portfolio = [
-            {"profilo": "A_trend", "numeri": list(best["A_trend"][0]),
-             "score_profilo": round(best["A_trend"][1], 4)},
-            {"profilo": "B_contrarian", "numeri": list(best["B_contrarian"][0]),
-             "score_profilo": round(best["B_contrarian"][1], 4)},
-            {"profilo": "C_coverage", "numeri": list(best["C_coverage"][0]),
-             "score_profilo": round(best["C_coverage"][1], 4)},
-        ]
-
-        portfolio = self._fix_overlaps(portfolio, scored)
-        coverage = self._portfolio_coverage([p["numeri"] for p in portfolio])
-        if verbose:
-            print(f"[*] Coverage portafoglio: {coverage:.4f}")
-
-        return portfolio
-
-    def _fix_overlaps(self, portfolio: List[Dict], scored: Dict,
-                      max_overlap: int = 2) -> List[Dict]:
-        ov_ab = len(set(portfolio[0]["numeri"]) & set(portfolio[1]["numeri"]))
-        if ov_ab > max_overlap:
-            for combo, sc in scored["B_contrarian"][1:]:
-                ov = len(set(portfolio[0]["numeri"]) & set(combo))
-                ov_c = len(set(portfolio[2]["numeri"]) & set(combo))
-                if ov <= max_overlap and ov_c <= max_overlap:
-                    portfolio[1] = {
-                        "profilo": "B_contrarian",
-                        "numeri": list(combo),
-                        "score_profilo": round(sc, 4),
-                    }
-                    break
-
-        ov_ac = len(set(portfolio[0]["numeri"]) & set(portfolio[2]["numeri"]))
-        if ov_ac > max_overlap:
-            for combo, sc in scored["C_coverage"][1:]:
-                ov = len(set(portfolio[0]["numeri"]) & set(combo))
-                ov_b = len(set(portfolio[1]["numeri"]) & set(combo))
-                if ov <= max_overlap and ov_b <= max_overlap:
-                    portfolio[2] = {
-                        "profilo": "C_coverage",
-                        "numeri": list(combo),
-                        "score_profilo": round(sc, 4),
-                    }
-                    break
+            if items:
+                portfolio.append({
+                    "profilo": profile,
+                    "numeri": list(items[0][0]),
+                    "score_profilo": round(items[0][1], 4),
+                })
 
         return portfolio
