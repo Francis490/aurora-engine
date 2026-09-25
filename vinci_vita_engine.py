@@ -1,6 +1,10 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v3.4 — Orchestratore con Sestina Unificata + Bias Test.
+AURORA ENGINE v3.5 — Orchestratore con Sestina Unificata + Bias Test.
+
+FIX (2026-09-25):
+- Bankroll DISATTIVATO (tracking manuale non attivo)
+- Per riattivare: decommenta il blocco `if BANK:` nella sezione bankroll
 """
 import json
 import os
@@ -113,7 +117,7 @@ def build_pool_from_history(history, size=30):
 
 def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     print("=" * 70)
-    print("AURORA ENGINE v3.4 — PIPELINE SESTINA UNIFICATA")
+    print("AURORA ENGINE v3.5 — PIPELINE SESTINA UNIFICATA")
     print("=" * 70)
 
     history = load_history()
@@ -151,15 +155,19 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
+    # ==========================================
+    # BANKROLL DISATTIVATO (tracking manuale non attivo)
+    # ==========================================
+    # Per riattivare: decommenta il blocco sotto
     bm = None
     bs = None
-    if BANK:
-        try:
-            bm = BankrollManager(initial_bankroll=100.0)
-            bs = bm.get_state()
-            print(f"[*] Bankroll: €{bs['bankroll']:.2f}")
-        except Exception as e:
-            print(f"[!] Bankroll errore: {e}")
+    # if BANK:
+    #     try:
+    #         bm = BankrollManager(initial_bankroll=100.0)
+    #         bs = bm.get_state()
+    #         print(f"[*] Bankroll: €{bs['bankroll']:.2f}")
+    #     except Exception as e:
+    #         print(f"[!] Bankroll errore: {e}")
 
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
@@ -259,7 +267,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "3.4",
+        "version": "3.5",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -298,7 +306,7 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v3.4 — REPORT",
+        "🌅 AURORA ENGINE v3.5 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
@@ -318,10 +326,7 @@ def format_report(payload):
     if payload.get("regime_report"):
         lines.append(f"🔬 {payload['regime_report']['health']}")
         lines.append("")
-    if payload.get("bankroll_state"):
-        bs = payload["bankroll_state"]
-        lines.append(f"💰 Bankroll: €{bs['bankroll']:.2f}")
-        lines.append("")
+
     nd = payload["next_draw"]
     lines.append(f"🎯 PROSSIMA: Concorso N° {nd['concorso']} · {nd['data']}")
     lines.append("")
@@ -340,7 +345,7 @@ def format_report(payload):
                 line += f" · Share €{s['expected_share_eur']:,.0f}"
             lines.append(line)
         lines.append("")
-    lines.append("🌅 Aurora Engine v3.4 — Super Win for Life")
+    lines.append("🌅 Aurora Engine v3.5 — Super Win for Life")
     return "\n".join(lines)
 
 
