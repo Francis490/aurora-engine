@@ -111,7 +111,7 @@ def record_play_in_file(payload):
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v3.4 — {len(sestinas)} sestina",
+        "note": f"Aurora Engine v3.5 — {len(sestinas)} sestina",
     })
 
     save_played(played)
@@ -123,7 +123,7 @@ def format_telegram_report(payload):
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v3.4</b>")
+    lines.append("🌅 <b>AURORA ENGINE v3.5</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
@@ -208,7 +208,7 @@ def format_telegram_report(payload):
         lines.append("🚫 <b>SKIP MODE</b>")
         lines.append("")
 
-    lines.append("🌅 <i>Aurora Engine v3.4 — Super Win for Life</i>")
+    lines.append("🌅 <i>Aurora Engine v3.5 — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     return "\n".join(lines)
@@ -229,7 +229,7 @@ def main():
         return
 
     print("=" * 65)
-    print("AURORA ENGINE v3.4 — TELEGRAM DISPATCH")
+    print("AURORA ENGINE v3.5 — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
