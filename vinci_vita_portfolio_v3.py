@@ -1,13 +1,14 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v3.4 — Portfolio multi-profilo + Sestina UNIFICATA.
+AURORA ENGINE v4.0 — Portfolio senza anti-crowd + build_single random sampling.
 
-Modalità:
-- build_single(): genera 1 sestina ottimale (A+B+C combinati)
-- build(): genera 3 sestine separate (legacy, non usato)
+FIX (2026-09-26):
+- build_single usa campionamento casuale (200K) invece di iterazione esaustiva
+  (C(90,6) = 622M combinazioni → troppo pesante)
+- Anti-crowd rimosso dallo scoring
 """
 import itertools
-import math
+import random
 from collections import defaultdict
 from typing import List, Dict, Tuple, Optional
 
@@ -15,7 +16,7 @@ from typing import List, Dict, Tuple, Optional
 SUM_MIN = 240
 SUM_MAX = 310
 
-# Pesi compositi per sestina unificata
+# Pesi compositi
 WEIGHT_A = 0.40
 WEIGHT_B = 0.30
 WEIGHT_C = 0.30
@@ -77,16 +78,6 @@ class AuroraPortfolioV3:
             return avg_gap * 0.7
         return avg_gap
 
-    def _score_coverage(self, combo: Tuple[int, ...], crowd_model=None) -> float:
-        if crowd_model:
-            ac = crowd_model.anti_crowd_score_v3(list(combo))
-        else:
-            ac = sum(1.5 if n > 60 else (1.2 if n > 45 else 0.7) for n in combo)
-        n_decades = len(set((n - 1) // 10 for n in combo))
-        s = sorted(combo)
-        spread = s[-1] - s[0]
-        return ac * (n_decades / 6.0) * (spread / 80.0)
-
     def _portfolio_coverage(self, sestinas: List[List[int]]) -> float:
         all_nums = set()
         for s in sestinas:
@@ -108,39 +99,76 @@ class AuroraPortfolioV3:
         return 0.5 * unique_ratio + 0.3 * decade_ratio + 0.2 * balance
 
     # ==========================================
-    # SESTINA UNIFICATA (1 sola)
+    # SESTINA UNIFICATA (1 sola) — v4.0 RANDOM SAMPLING
     # ==========================================
     def build_single(self, pool: List[int], fp_engine=None,
                      crowd_model=None, bias_weights: Optional[Dict] = None,
                      verbose: bool = True) -> List[Dict]:
         """
-        Genera UNA sola sestina ottimale combinando i 3 profili.
-        Pesi: 40% trend, 30% contrarian, 30% coverage.
+        Genera UNA sestina ottimale SENZA anti-crowd.
+
+        FIX (2026-09-26): usa campionamento casuale (200K) invece di
+        iterazione esaustiva C(90,6)=622M. Tempo: ~5-10s.
         """
         if len(pool) < 6:
             return []
 
-        all_combos = []
-        for combo in itertools.combinations(pool, 6):
-            ssum = sum(combo)
-            if SUM_MIN <= ssum <= SUM_MAX:
-                all_combos.append(combo)
+        rng = random.Random(42)  # riproducibile
+
+        n_target = 200_000
+        candidates_raw = []
+        seen = set()
+
+        attempts = 0
+        max_attempts = n_target * 5
+
+        while len(candidates_raw) < n_target and attempts < max_attempts:
+            attempts += 1
+            try:
+                combo = tuple(sorted(rng.sample(pool, 6)))
+            except ValueError:
+                break
+            if combo in seen:
+                continue
+            seen.add(combo)
+            if SUM_MIN <= sum(combo) <= SUM_MAX:
+                candidates_raw.append(combo)
 
         if verbose:
-            print(f"[*] Combinazioni valide: {len(all_combos)}")
+            print(f"[*] Campioni validi (somma {SUM_MIN}-{SUM_MAX}): {len(candidates_raw)}")
 
-        w_a = (bias_weights or {}).get("A_trend", 1.0)
-        w_b = (bias_weights or {}).get("B_contrarian", 1.0)
-        w_c = (bias_weights or {}).get("C_coverage", 1.0)
+        if not candidates_raw:
+            return []
 
+        # Valida fingerprint (12/12) se disponibile
+        valid = []
+        if fp_engine:
+            try:
+                from vinci_vita_generator import validate_sestina, extract_fingerprints
+                fp = extract_fingerprints(self.history)
+                for combo in candidates_raw:
+                    ok, _, _ = validate_sestina(list(combo), fp)
+                    if ok:
+                        valid.append(combo)
+                if verbose:
+                    print(f"[*] Con 12/12 fingerprint: {len(valid)}")
+            except Exception as e:
+                if verbose:
+                    print(f"[!] Fingerprint check errore: {e}")
+                valid = candidates_raw
+        else:
+            valid = candidates_raw
+
+        if not valid:
+            valid = candidates_raw
+
+        # Score composito: 50% trend + 50% contrarian
         scored = []
-        for combo in all_combos:
-            s_a = self._score_trend_follower(combo) * w_a
-            s_b = self._score_contrarian(combo) * w_b
-            s_c = self._score_coverage(combo, crowd_model) * w_c
-
-            composite = WEIGHT_A * s_a + WEIGHT_B * s_b + WEIGHT_C * s_c
-            scored.append((combo, composite, s_a, s_b, s_c))
+        for combo in valid:
+            s_trend = self._score_trend_follower(combo)
+            s_contr = self._score_contrarian(combo)
+            composite = 0.5 * s_trend + 0.5 * s_contr
+            scored.append((combo, composite))
 
         scored.sort(key=lambda x: x[1], reverse=True)
 
@@ -149,8 +177,7 @@ class AuroraPortfolioV3:
 
         best = scored[0]
         if verbose:
-            print(f"[*] Migliore UNIFIED: {list(best[0])} (composite {best[1]:.3f})")
-            print(f"    A={best[2]:.3f} B={best[3]:.3f} C={best[4]:.3f}")
+            print(f"[*] Migliore: {list(best[0])} (score {best[1]:.3f})")
 
         return [{
             "profilo": "UNIFIED",
@@ -159,7 +186,7 @@ class AuroraPortfolioV3:
         }]
 
     # ==========================================
-    # LEGACY: 3 sestine separate
+    # LEGACY: 3 sestine separate (non usato)
     # ==========================================
     def build(self, pool: List[int], fp_engine=None,
               crowd_model=None, bias_weights: Optional[Dict] = None,
@@ -181,7 +208,6 @@ class AuroraPortfolioV3:
         for combo in all_combos:
             scored["A_trend"].append((combo, self._score_trend_follower(combo)))
             scored["B_contrarian"].append((combo, self._score_contrarian(combo)))
-            scored["C_coverage"].append((combo, self._score_coverage(combo, crowd_model)))
 
         if bias_weights:
             for profile, items in scored.items():
