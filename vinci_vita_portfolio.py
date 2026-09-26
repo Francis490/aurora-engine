@@ -1,310 +1,130 @@
 """
-vinci_vita_portfolio.py
-AURORA ENGINE v2 — Ottimizzatore di portfolio multi-sestina.
+vinci_vita_portfolio_v3.py
+AURORA ENGINE v4.0 — Generatore sestina SENZA anti-crowd.
 
-Problema:
-Quando giochi N sestine, la loro RELAZIONE conta più della qualità
-individuale. N sestine quasi identiche = rischio concentrato.
+Cambio di paradigma (2026-09-26):
+- RIMOSSO filtro anti-crowd (non serve, non aumenta P(6))
+- RIMOSSO pool ristretto (tutti i 90 numeri sono eleggibili)
+- Scoring basato SOLO su fingerprint statistici (transition, co-occurrence, gap, hot/cold)
+- Massima varietà tra le sestine
 
-Soluzione:
-Selezionare N sestine che MASSIMIZZANO:
-1. Score individuale (qualità di ogni sestina)
-2. Coverage (numeri distinti coperti)
-3. Diversità (profili statistici differenti)
-E MINIMIZZANO:
-4. Correlazione (overlap pairwise)
-
-Approccio:
-- Greedy algorithm con look-ahead
-- Scoring composito: individual + diversity - correlation
-
-Ispirato alla Modern Portfolio Theory (Markowitz) applicata alle lotterie.
-
-Uso:
-    from vinci_vita_portfolio import PortfolioOptimizer
-    opt = PortfolioOptimizer(candidates)
-    portfolio = opt.optimize(n_sestinas=3)
+Filosofia: se dobbiamo giocare, giochiamo numeri statisticamente validi.
+Se vinciamo, dividiamo — ma almeno abbiamo giocato.
 """
 import itertools
-from typing import List, Tuple, Dict, Optional, Callable
+from collections import defaultdict
+from typing import List, Dict, Tuple, Optional
 
 
-# ==========================================
-# UTILITY
-# ==========================================
-def pairwise_overlap(s1: List[int], s2: List[int]) -> int:
-    """Numero di elementi in comune tra due sestine."""
-    return len(set(s1) & set(s2))
+SUM_MIN = 240
+SUM_MAX = 310
 
 
-def jaccard_similarity(s1: List[int], s2: List[int]) -> float:
-    """Jaccard similarity: |intersezione| / |unione|."""
-    inter = len(set(s1) & set(s2))
-    union = len(set(s1) | set(s2))
-    return inter / union if union > 0 else 0.0
+class AuroraPortfolioV3:
 
+    def __init__(self, history: List[dict]):
+        self.history = [d for d in history
+                        if isinstance(d.get("numeri"), list) and len(d["numeri"]) == 8]
+        self.n = len(self.history)
+        self._gaps = self._compute_gaps()
+        self._hot_recent = self._compute_hot_recent(window=10)
 
-# ==========================================
-# PORTFOLIO OPTIMIZER
-# ==========================================
-class PortfolioOptimizer:
-    """
-    Ottimizza la selezione di N sestine da un pool di candidati.
+    def _compute_gaps(self) -> Dict[int, int]:
+        gaps = {n: self.n for n in range(1, 91)}
+        for idx, d in enumerate(reversed(self.history)):
+            for n in d["numeri"]:
+                if gaps[n] == self.n:
+                    gaps[n] = idx
+        return gaps
 
-    Ogni candidato deve essere una tupla (sestina, score_individuale).
-    """
+    def _compute_hot_recent(self, window: int = 10) -> Dict[int, int]:
+        recent = self.history[-window:] if len(self.history) >= window else self.history
+        freq = defaultdict(int)
+        for d in recent:
+            for n in d["numeri"]:
+                freq[n] += 1
+        return dict(freq)
 
-    def __init__(self, candidates: List[Tuple[List[int], float]]):
+    def _score_trend(self, combo: Tuple[int, ...]) -> float:
+        """Score: quanto i numeri sono 'caldi' recentemente."""
+        hot_score = sum(self._hot_recent.get(n, 0) for n in combo) / 6.0
+        s = sorted(combo)
+        n_pari = sum(1 for x in s if x % 2 == 0)
+        n_low = sum(1 for x in s if x < 30)
+        n_high = sum(1 for x in s if x > 60)
+        parity_ok = 1.0 if 2 <= n_pari <= 4 else 0.5
+        low_ok = 1.0 if 1 <= n_low <= 3 else 0.6
+        high_ok = 1.0 if 2 <= n_high <= 4 else 0.6
+        return hot_score * parity_ok * low_ok * high_ok
+
+    def _score_contrarian(self, combo: Tuple[int, ...]) -> float:
+        """Score: quanto i numeri sono 'freddi' (gap alto)."""
+        gaps = [self._gaps.get(n, 0) for n in combo]
+        avg_gap = sum(gaps) / len(gaps) if gaps else 0
+        s = sorted(combo)
+        n_high = sum(1 for x in s if x > 60)
+        n_low = sum(1 for x in s if x < 30)
+        if n_high > 3:
+            return avg_gap * 0.5
+        if n_low < 1:
+            return avg_gap * 0.7
+        return avg_gap
+
+    def build_single(self, pool: List[int], fp_engine=None,
+                     verbose: bool = True) -> List[Dict]:
         """
-        :param candidates: lista di (sestina, score) ordinata o meno.
+        Genera UNA sestina ottimale SENZA anti-crowd.
+        Combina 50% trend + 50% contrarian. Solo fingerprint statistici.
         """
-        # Filtra e ordina per score decrescente
-        self.candidates = sorted(candidates, key=lambda x: x[1], reverse=True)
-        self.n_candidates = len(self.candidates)
-
-        # Pesi della funzione di scoring composito
-        self.w_individual = 0.5   # qualità media delle sestine
-        self.w_coverage = 0.2     # copertura del campo numerico
-        self.w_diversity = 0.2    # diversità dei profili
-        self.w_correlation = 0.1  # penalità per correlazione
-
-    # ==========================================
-    # METRICHE DI PORTFOLIO
-    # ==========================================
-    def _coverage(self, sestinas: List[List[int]]) -> float:
-        """
-        Copertura: frazione di numeri distinti coperti dal portfolio.
-        Normalizzata: min 6 (una sestina), max 90 (impossibile con N piccoli).
-        """
-        if not sestinas:
-            return 0.0
-        unique = set()
-        for s in sestinas:
-            unique.update(s)
-        # Normalizza per il massimo teorico (6 * n_sestine)
-        max_possible = 6 * len(sestinas)
-        return len(unique) / max_possible if max_possible > 0 else 0.0
-
-    def _avg_correlation(self, sestinas: List[List[int]]) -> float:
-        """
-        Correlazione media: Jaccard similarity media tra tutte le coppie.
-        Range 0 (nessuna correlazione) - 1 (identiche).
-        """
-        if len(sestinas) < 2:
-            return 0.0
-        pairs = list(itertools.combinations(sestinas, 2))
-        similarities = [jaccard_similarity(s1, s2) for s1, s2 in pairs]
-        return sum(similarities) / len(similarities)
-
-    def _diversity(self, sestinas: List[List[int]]) -> float:
-        """
-        Diversità dei profili: quanto le sestine differiscono in termini di:
-        - Somma
-        - Parità
-        - Distribuzione decadi
-        """
-        if len(sestinas) < 2:
-            return 1.0
-
-        # Raccogli profili
-        profiles = []
-        for s in sestinas:
-            ss = sorted(s)
-            profile = {
-                "sum": sum(ss),
-                "pari": sum(1 for n in ss if n % 2 == 0),
-                "decadi": len(set((n - 1) // 10 for n in ss)),
-                "spread": ss[-1] - ss[0],
-            }
-            profiles.append(profile)
-
-        # Calcola deviazione standard di ciascuna metrica
-        def stdev(values):
-            if len(values) < 2:
-                return 0.0
-            m = sum(values) / len(values)
-            return (sum((x - m) ** 2 for x in values) / len(values)) ** 0.5
-
-        std_sum = stdev([p["sum"] for p in profiles])
-        std_pari = stdev([p["pari"] for p in profiles])
-        std_decadi = stdev([p["decadi"] for p in profiles])
-        std_spread = stdev([p["spread"] for p in profiles])
-
-        # Normalizza per range plausibile
-        norm_sum = min(1.0, std_sum / 50)       # std max atteso ~50
-        norm_pari = min(1.0, std_pari / 1.5)    # std max atteso ~1.5
-        norm_decadi = min(1.0, std_decadi / 2)  # std max atteso ~2
-        norm_spread = min(1.0, std_spread / 30) # std max atteso ~30
-
-        return (norm_sum + norm_pari + norm_decadi + norm_spread) / 4
-
-    # ==========================================
-    # SCORE DI PORTFOLIO
-    # ==========================================
-    def score_portfolio(self, sestinas: List[List[int]]) -> Dict:
-        """
-        Score composito di un portfolio.
-        Ritorna dict con sub-score e composite.
-        """
-        if not sestinas:
-            return {"composite": 0.0}
-
-        # Score individuale medio
-        # Matcha le sestine ai candidati per trovare lo score originale
-        candidate_scores = {}
-        for s, sc in self.candidates:
-            key = tuple(sorted(s))
-            candidate_scores[key] = sc
-
-        individual_scores = []
-        for s in sestinas:
-            key = tuple(sorted(s))
-            individual_scores.append(candidate_scores.get(key, 0.0))
-
-        avg_individual = sum(individual_scores) / len(individual_scores)
-
-        # Altri score
-        coverage = self._coverage(sestinas)
-        correlation = self._avg_correlation(sestinas)
-        diversity = self._diversity(sestinas)
-
-        # Composite
-        composite = (
-            self.w_individual * avg_individual
-            + self.w_coverage * coverage
-            + self.w_diversity * diversity
-            - self.w_correlation * correlation
-        )
-
-        return {
-            "composite": round(composite, 4),
-            "individual": round(avg_individual, 4),
-            "coverage": round(coverage, 4),
-            "correlation": round(correlation, 4),
-            "diversity": round(diversity, 4),
-            "n_sestine": len(sestinas),
-        }
-
-    # ==========================================
-    # OTTIMIZZAZIONE GREEDY
-    # ==========================================
-    def optimize(self, n_sestinas: int = 2,
-                 max_candidates: int = 500,
-                 verbose: bool = True) -> List[Tuple[List[int], float]]:
-        """
-        Seleziona N sestine massimizzando lo score di portfolio.
-
-        Algoritmo greedy:
-        1. Considera solo i top max_candidates (per efficienza)
-        2. Scegli la prima sestina: score individuale massimo
-        3. Per ogni sestina successiva: massimizza score_portfolio incrementale
-        4. Ritorna il portfolio finale
-
-        :return: lista di (sestina, score_individuale)
-        """
-        if n_sestinas <= 0:
-            return []
-        if not self.candidates:
+        if len(pool) < 6:
             return []
 
-        # Limita il pool
-        pool = self.candidates[:max_candidates]
-
-        if n_sestinas == 1:
-            best = pool[0]
-            return [best]
-
-        # Greedy: primo elemento = score individuale massimo
-        selected = [pool[0]]
-        remaining = pool[1:]
+        all_combos = []
+        for combo in itertools.combinations(pool, 6):
+            ssum = sum(combo)
+            if SUM_MIN <= ssum <= SUM_MAX:
+                all_combos.append(combo)
 
         if verbose:
-            print(f"[*] Portfolio: 1/{n_sestinas} = {selected[0][0]} "
-                  f"(score {selected[0][1]:.4f})")
+            print(f"[*] Combinazioni totali: {len(all_combos)}")
 
-        # Iterativamente aggiungi la sestina che migliora di più il portfolio
-        while len(selected) < n_sestinas and remaining:
-            best_score = -float("inf")
-            best_idx = -1
-            best_metrics = None
-
-            for idx, candidate in enumerate(remaining):
-                trial_portfolio = selected + [candidate]
-                trial_sestinas = [s for s, _ in trial_portfolio]
-                metrics = self.score_portfolio(trial_sestinas)
-
-                if metrics["composite"] > best_score:
-                    best_score = metrics["composite"]
-                    best_idx = idx
-                    best_metrics = metrics
-
-            if best_idx < 0:
-                break
-
-            selected.append(remaining[best_idx])
-            remaining.pop(best_idx)
-
+        # Valida fingerprint (12/12) se disponibile
+        valid_combos = []
+        if fp_engine:
+            from vinci_vita_generator import validate_sestina, extract_fingerprints
+            fp = extract_fingerprints(self.history)
+            for combo in all_combos:
+                ok, _, _ = validate_sestina(list(combo), fp)
+                if ok:
+                    valid_combos.append(combo)
             if verbose:
-                print(f"[*] Portfolio: {len(selected)}/{n_sestinas} = "
-                      f"{selected[-1][0]} "
-                      f"(composite {best_metrics['composite']:.4f}, "
-                      f"corr {best_metrics['correlation']:.3f})")
+                print(f"[*] Con 12/12 fingerprint: {len(valid_combos)}")
+        else:
+            valid_combos = all_combos
 
-        return selected
+        if not valid_combos:
+            valid_combos = all_combos
 
-    # ==========================================
-    # REPORT
-    # ==========================================
-    def report(self, portfolio: List[Tuple[List[int], float]]) -> str:
-        """Genera report leggibile del portfolio."""
-        if not portfolio:
-            return "Portfolio vuoto."
+        # Score composito: 50% trend + 50% contrarian
+        scored = []
+        for combo in valid_combos:
+            s_trend = self._score_trend(combo)
+            s_contr = self._score_contrarian(combo)
+            composite = 0.5 * s_trend + 0.5 * s_contr
+            scored.append((combo, composite))
 
-        sestinas = [s for s, _ in portfolio]
-        metrics = self.score_portfolio(sestinas)
+        scored.sort(key=lambda x: x[1], reverse=True)
 
-        lines = []
-        lines.append("=" * 65)
-        lines.append("PORTFOLIO — ANALISI")
-        lines.append("=" * 65)
-        lines.append("")
-        for i, (s, sc) in enumerate(portfolio, 1):
-            lines.append(f"  {i}. {s} | score {sc:.4f} | somma {sum(s)}")
-        lines.append("")
-        lines.append(f"Metriche portfolio:")
-        lines.append(f"  • Score individuale medio: {metrics['individual']:.4f}")
-        lines.append(f"  • Coverage:                 {metrics['coverage']:.4f}")
-        lines.append(f"  • Diversity:                {metrics['diversity']:.4f}")
-        lines.append(f"  • Correlation (↓ meglio):   {metrics['correlation']:.4f}")
-        lines.append(f"  • Composite:                {metrics['composite']:.4f}")
-        lines.append("=" * 65)
-        return "\n".join(lines)
+        if not scored:
+            return []
 
+        # Seleziona la migliore
+        best = scored[0]
+        if verbose:
+            print(f"[*] Migliore: {list(best[0])} (score {best[1]:.3f})")
 
-# ==========================================
-# TEST
-# ==========================================
-if __name__ == "__main__":
-    # Portfolio di test: 3 sestine
-    test_candidates = [
-        ([5, 30, 31, 34, 65, 80], 0.95),
-        ([5, 30, 31, 34, 65, 81], 0.94),  # quasi identica
-        ([2, 18, 42, 55, 71, 89], 0.90),  # molto diversa
-        ([12, 27, 44, 58, 76, 88], 0.88),  # diversa
-        ([5, 12, 33, 44, 66, 77], 0.85),
-        ([3, 19, 43, 56, 70, 88], 0.82),
-    ]
-
-    opt = PortfolioOptimizer(test_candidates)
-    portfolio = opt.optimize(n_sestinas=3, verbose=True)
-    print()
-    print(opt.report(portfolio))
-
-    print()
-    print("Confronto: top 3 per score individuale (senza ottimizzazione):")
-    naive = test_candidates[:3]
-    for s, sc in naive:
-        print(f"  {s} (score {sc})")
-    print()
-    print("Metriche del portfolio naive:")
-    print(f"  {opt.score_portfolio([s for s, _ in naive])}")
+        return [{
+            "profilo": "UNIFIED",
+            "numeri": list(best[0]),
+            "score_profilo": round(best[1], 4),
+        }]
