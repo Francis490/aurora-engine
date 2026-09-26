@@ -1,6 +1,6 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v3.5 — Bot Telegram sender (sestina unica).
+AURORA ENGINE v4.0 — Bot Telegram sender (sestina unica, no anti-crowd).
 """
 import json
 import os
@@ -111,7 +111,7 @@ def record_play_in_file(payload):
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v3.5 — {len(sestinas)} sestina",
+        "note": f"Aurora Engine v4.0 — {len(sestinas)} sestina",
     })
 
     save_played(played)
@@ -123,7 +123,7 @@ def format_telegram_report(payload):
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v3.5</b>")
+    lines.append("🌅 <b>AURORA ENGINE v4.0</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
@@ -145,16 +145,6 @@ def format_telegram_report(payload):
     if payload.get("regime_report"):
         h = payload["regime_report"]["health"]
         lines.append(f"🔬 {h}")
-        lines.append("")
-
-    if payload.get("bankroll_state"):
-        bs = payload["bankroll_state"]
-        lines.append(f"💰 <b>Bankroll:</b> €{bs['bankroll']:.2f} "
-                     f"(peak €{bs['peak']:.2f})")
-        lines.append(f"   ROI: {bs['roi_pct']:+.2f}% | "
-                     f"Drawdown: {bs['drawdown_pct']:.2f}%")
-        if bs.get("is_stopped"):
-            lines.append(f"   ⚠️ <b>STOP ATTIVO</b> fino al {bs.get('stop_until')}")
         lines.append("")
 
     nd = payload.get("next_draw", {})
@@ -184,31 +174,17 @@ def format_telegram_report(payload):
     sestinas = payload.get("sestinas", [])
     if sestinas:
         costo = payload.get("costo_totale", 0)
-        lines.append(f"🎲 <b>SESTINA UNIFICATA (€{costo:.2f})</b>")
+        lines.append(f"🎲 <b>SESTINA (€{costo:.2f})</b>")
         for s in sestinas:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
-
-            metric_parts = [
-                f"Somma {s['somma']}",
-                f"ACv3 {s['anti_crowd_score']:.2f}",
-            ]
-            share = s.get("expected_share_eur")
-            if share is not None:
-                metric_parts.append(f"Share €{share:,.0f}")
-
-            lines.append("   " + " · ".join(metric_parts))
-
-        if payload.get("portfolio_coverage"):
-            lines.append("")
-            lines.append(f"📊 Coverage: {payload['portfolio_coverage']:.3f}")
-
+            lines.append(f"   Somma {s['somma']}")
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b>")
         lines.append("")
 
-    lines.append("🌅 <i>Aurora Engine v3.5 — Super Win for Life</i>")
+    lines.append("🌅 <i>Aurora Engine v4.0 — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     return "\n".join(lines)
@@ -229,7 +205,7 @@ def main():
         return
 
     print("=" * 65)
-    print("AURORA ENGINE v3.5 — TELEGRAM DISPATCH")
+    print("AURORA ENGINE v4.0 — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
