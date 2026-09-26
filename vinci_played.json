@@ -159,6 +159,23 @@
         ]
       ],
       "note": "Aurora Engine v3.4 — 1 sestina"
+    },
+    {
+      "concorso": 117,
+      "data": "27/09/2026",
+      "giocata_il": "26/09/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          1,
+          31,
+          36,
+          64,
+          78,
+          86
+        ]
+      ],
+      "note": "Aurora Engine v4.0 — 1 sestina"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
-  "version": "3.5",
-  "updated_at": "2026-09-25T21:38:58",
-  "rendita_mensile": 13990,
-  "valore_attuale_rendita": 2765459.75,
+  "version": "4.0",
+  "updated_at": "2026-09-26T20:49:27",
+  "rendita_mensile": 14040,
+  "valore_attuale_rendita": 2775343.45,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -17,78 +17,67 @@
       "id": 1,
       "profilo": "UNIFIED",
       "numeri": [
-        12,
-        30,
-        40,
-        53,
-        70,
-        84
+        1,
+        31,
+        36,
+        64,
+        78,
+        86
       ],
-      "somma": 289,
-      "score_profilo": 8.15,
-      "anti_crowd_score": 10.0,
-      "expected_share_eur": 2729878.0,
+      "somma": 296,
+      "score_profilo": 14.8333,
       "fingerprint_detail": {
-        "composite": 0.1506,
-        "transition": 0.0299,
-        "cooccurrence": 0.0058,
-        "gap_pattern": 0.5666,
+        "composite": 0.097,
+        "transition": 0.025,
+        "cooccurrence": 0.0057,
+        "gap_pattern": 0.3573,
         "hot_cold": 0.0
       }
     }
   ],
-  "portfolio_coverage": 0.8663,
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 62.57,
+    "chi2": 61.81,
     "is_uniform": true,
     "has_hot_bias": false,
     "has_cold_bias": false,
     "has_autocorr": false,
     "hot_numbers": [
-      17,
       18,
+      17,
       49
     ],
-    "cold_numbers": [
-      58
-    ],
-    "profile_weights": {
-      "A_trend": 1.0,
-      "B_contrarian": 1.0,
-      "C_coverage": 1.0
-    }
+    "cold_numbers": []
   },
   "ev": {
-    "ev_netto": -1.1323,
-    "ev_percentuale": -56.61
+    "ev_netto": -1.1318,
+    "ev_percentuale": -56.59
   },
   "last_draw": {
-    "concorso": 115,
-    "data": "25/09/2026",
+    "concorso": 116,
+    "data": "26/09/2026",
     "numeri": [
-      3,
-      29,
-      32,
-      44,
-      59,
-      66,
-      71,
-      83
+      16,
+      18,
+      58,
+      61,
+      67,
+      79,
+      85,
+      87
     ]
   },
   "next_draw": {
-    "concorso": 116,
-    "data": "26/09/2026",
+    "concorso": 117,
+    "data": "27/09/2026",
     "ora": "20:00"
   },
   "fingerprint_base": {
-    "n_draws": 115,
-    "sum_mean": 269.27
+    "n_draws": 116,
+    "sum_mean": 269.99
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 115
-  },
-  "bankroll_state": null
+    "n": 116
+  }
 }
