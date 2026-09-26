@@ -1,10 +1,13 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v3.5 — Orchestratore con Sestina Unificata + Bias Test.
+AURORA ENGINE v4.0 — Orchestratore SENZA anti-crowd.
 
-FIX (2026-09-25):
-- Bankroll DISATTIVATO (tracking manuale non attivo)
-- Per riattivare: decommenta il blocco `if BANK:` nella sezione bankroll
+FIX (2026-09-26):
+- Rimosso CrowdModel (anti-crowd)
+- Rimosso filtro ACv3
+- Pool = tutti i 90 numeri (nessuna restrizione)
+- Solo fingerprint statistici per la validazione
+- Massima varietà tra le sestine
 """
 import json
 import os
@@ -16,15 +19,9 @@ from vinci_vita_math import (
     RENDITA_ATTUALE_MENSILE, COSTO_GIOCATA_EUR,
 )
 from vinci_vita_generator import (
-    extract_fingerprints, anti_crowd_score as anti_crowd_score_v1,
+    extract_fingerprints,
     SUM_HARD_MIN, SUM_HARD_MAX,
 )
-
-try:
-    from vinci_vita_crowd import CrowdModel
-    CROWD_V3 = True
-except ImportError:
-    CROWD_V3 = False
 
 try:
     from vinci_vita_fingerprints import AuroraFingerprintEngine
@@ -44,13 +41,6 @@ try:
     BIAS_OK = True
 except ImportError:
     BIAS_OK = False
-    print("[!] vinci_vita_bias_test non disponibile")
-
-try:
-    from vinci_vita_bankroll import BankrollManager
-    BANK = True
-except ImportError:
-    BANK = False
 
 try:
     from vinci_vita_regime import RegimeDetector
@@ -82,69 +72,22 @@ def save_json(fp, data):
         print(f"[!] Errore salvataggio: {e}")
 
 
-def build_pool_from_history(history, size=30):
-    if not history:
-        return [n for n in range(10, 91, 3)][:size]
-
-    freq = {i: 0 for i in range(1, 91)}
-    td = 0
-    for d in history:
-        nums = d.get("numeri", [])
-        if len(nums) != 8:
-            continue
-        td += 1
-        for n in nums:
-            if 1 <= n <= 90:
-                freq[n] += 1
-
-    if td == 0:
-        return [n for n in range(10, 91, 3)][:size]
-
-    avg = sum(freq.values()) / 90
-    candidates = list(range(10, 91))
-    scored = sorted(candidates, key=lambda n: abs(freq[n] - avg))
-    pool = scored[:size]
-
-    anti = [n for n in range(61, 91) if n not in pool]
-    anti.sort(key=lambda n: abs(freq[n] - avg))
-    for n in anti[:8]:
-        if len(pool) >= size:
-            pool.pop()
-        pool.append(n)
-
-    return sorted(set(pool))
-
-
 def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     print("=" * 70)
-    print("AURORA ENGINE v3.5 — PIPELINE SESTINA UNIFICATA")
+    print("AURORA ENGINE v4.0 — SESTINA SENZA ANTI-CROWD")
     print("=" * 70)
 
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
-    next_date = None
-    if history:
-        ld = history[-1]
-        try:
-            dt = datetime.strptime(ld.get("data", ""), "%d/%m/%Y")
-            next_date = (dt + timedelta(days=1)).strftime("%d/%m/%Y")
-        except Exception:
-            pass
-
+    # Bias test
     bias_result = None
-    bias_weights = None
     if BIAS_OK:
-        print(f"\n[*] Analisi bias in corso...")
+        print(f"\n[*] Analisi bias...")
         bias_result = quick_bias_check(history, verbose=True)
-        bias_weights = bias_result.get("profile_weights")
-        print(f"[*] Bias health: {bias_result['health']}")
+        print(f"[*] {bias_result['health']}")
 
-    crowd_model = None
-    if CROWD_V3:
-        crowd_model = CrowdModel(date_str=next_date, jackpot=rendita * 20 * 12)
-        print(f"[*] CrowdModel v3: attivo (ctx ×{crowd_model.m_context:.3f})")
-
+    # Regime
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -155,26 +98,13 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
-    # ==========================================
-    # BANKROLL DISATTIVATO (tracking manuale non attivo)
-    # ==========================================
-    # Per riattivare: decommenta il blocco sotto
-    bm = None
-    bs = None
-    # if BANK:
-    #     try:
-    #         bm = BankrollManager(initial_bankroll=100.0)
-    #         bs = bm.get_state()
-    #         print(f"[*] Bankroll: €{bs['bankroll']:.2f}")
-    #     except Exception as e:
-    #         print(f"[!] Bankroll errore: {e}")
-
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
 
-    pool = build_pool_from_history(history, size=30)
-    print(f"[*] Pool ({len(pool)} numeri): {pool}")
+    # Pool = TUTTI i 90 numeri (nessuna restrizione)
+    pool = list(range(1, 91))
+    print(f"[*] Pool: tutti i 90 numeri")
 
     fp = extract_fingerprints(history)
     print(f"[*] Fingerprint base: {fp['n_draws']} estrazioni")
@@ -190,13 +120,11 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    print(f"\n[*] Costruzione sestina UNIFICATA (A+B+C combinati)...")
+    print(f"\n[*] Costruzione sestina (50% trend + 50% contrarian, no anti-crowd)...")
     p3 = AuroraPortfolioV3(history)
     portfolio_raw = p3.build_single(
         pool,
         fp_engine=fp_eng,
-        crowd_model=crowd_model,
-        bias_weights=bias_weights,
         verbose=True,
     )
 
@@ -208,13 +136,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     for i, item in enumerate(portfolio_raw, 1):
         s = item["numeri"]
         ssum = sum(s)
-
-        if crowd_model:
-            ac_v3 = crowd_model.anti_crowd_score_v3(s)
-            share = crowd_model.expected_share(s)
-        else:
-            ac_v3 = anti_crowd_score_v1(s)
-            share = None
 
         fpd = None
         if fp_eng:
@@ -229,23 +150,16 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
             "numeri": s,
             "somma": ssum,
             "score_profilo": item["score_profilo"],
-            "anti_crowd_score": round(ac_v3, 2),
-            "expected_share_eur": share,
             "fingerprint_detail": fpd,
         })
-        print(f"  {i}. [{item['profilo']}] {s} | somma {ssum} | ACv3 {ac_v3:.2f}")
+        print(f"  {i}. [{item['profilo']}] {s} | somma {ssum}")
 
-    coverage = p3._portfolio_coverage([item["numeri"] for item in portfolio_raw])
-    print(f"\n[*] Coverage: {coverage:.4f}")
-
-    payload = build_payload(history, sdata, budget, rendita, ev, fp,
-                            regime, bs, coverage, bias_result)
+    payload = build_payload(history, sdata, budget, rendita, ev, fp, regime, bias_result)
     save_json(DATABASE_FILE, payload)
     return payload
 
 
-def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
-                  coverage=None, bias_result=None):
+def build_payload(history, sdata, budget, rendita, ev, fp, regime, bias_result):
     now = datetime.now()
     ld = history[-1] if history else {}
     lc = ld.get("concorso", "N/A")
@@ -267,7 +181,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "3.5",
+        "version": "4.0",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -275,7 +189,6 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
         "n_sestinas": len(sdata),
         "costo_totale": round(len(sdata) * COSTO_GIOCATA_EUR, 2),
         "sestinas": sdata,
-        "portfolio_coverage": round(coverage, 4) if coverage else None,
         "bias_analysis": {
             "health": bias_result.get("health"),
             "chi2": bias_result.get("chi2"),
@@ -285,7 +198,6 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
             "has_autocorr": bias_result.get("has_autocorr"),
             "hot_numbers": bias_result.get("hot_numbers", [])[:5],
             "cold_numbers": bias_result.get("cold_numbers", [])[:5],
-            "profile_weights": bias_result.get("profile_weights"),
         } if bias_result else None,
         "ev": {
             "ev_netto": round(ev["ev_netto"], 4),
@@ -298,7 +210,6 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bs,
             "sum_mean": fp["sum_mean"] if fp else None,
         } if fp else None,
         "regime_report": regime,
-        "bankroll_state": bs,
     }
 
 
@@ -306,7 +217,7 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v3.5 — REPORT",
+        "🌅 AURORA ENGINE v4.0 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
@@ -317,10 +228,6 @@ def format_report(payload):
     if payload.get("bias_analysis"):
         ba = payload["bias_analysis"]
         lines.append(f"🧪 {ba.get('health', 'N/A')}")
-        if ba.get("hot_numbers"):
-            lines.append(f"   Hot: {ba['hot_numbers']}")
-        if ba.get("cold_numbers"):
-            lines.append(f"   Cold: {ba['cold_numbers']}")
         lines.append("")
 
     if payload.get("regime_report"):
@@ -330,22 +237,22 @@ def format_report(payload):
     nd = payload["next_draw"]
     lines.append(f"🎯 PROSSIMA: Concorso N° {nd['concorso']} · {nd['data']}")
     lines.append("")
+
     ld = payload["last_draw"]
     if ld["numeri"]:
         ns = " · ".join(str(n).zfill(2) for n in ld["numeri"])
         lines.append(f"📊 ULTIMA (N° {ld['concorso']}): {ns}")
         lines.append("")
+
     if payload["sestinas"]:
-        lines.append(f"🎲 SESTINA UNIFICATA (€{payload['costo_totale']:.2f})")
+        lines.append(f"🎲 SESTINA (€{payload['costo_totale']:.2f})")
         for s in payload["sestinas"]:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
-            line = f"   Somma {s['somma']} · ACv3 {s['anti_crowd_score']:.2f}"
-            if s.get("expected_share_eur"):
-                line += f" · Share €{s['expected_share_eur']:,.0f}"
-            lines.append(line)
+            lines.append(f"   Somma {s['somma']}")
         lines.append("")
-    lines.append("🌅 Aurora Engine v3.5 — Super Win for Life")
+
+    lines.append("🌅 Aurora Engine v4.0 — Super Win for Life")
     return "\n".join(lines)
 
 
