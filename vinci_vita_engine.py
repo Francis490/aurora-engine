@@ -1,13 +1,6 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v4.0 — Orchestratore SENZA anti-crowd.
-
-FIX (2026-09-26):
-- Rimosso CrowdModel (anti-crowd)
-- Rimosso filtro ACv3
-- Pool = tutti i 90 numeri (nessuna restrizione)
-- Solo fingerprint statistici per la validazione
-- Massima varietà tra le sestine
+AURORA ENGINE v4.1 — Orchestratore con cluster score.
 """
 import json
 import os
@@ -74,20 +67,18 @@ def save_json(fp, data):
 
 def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     print("=" * 70)
-    print("AURORA ENGINE v4.0 — SESTINA SENZA ANTI-CROWD")
+    print("AURORA ENGINE v4.1 — CLUSTER SCORE")
     print("=" * 70)
 
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
-    # Bias test
     bias_result = None
     if BIAS_OK:
         print(f"\n[*] Analisi bias...")
         bias_result = quick_bias_check(history, verbose=True)
         print(f"[*] {bias_result['health']}")
 
-    # Regime
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -102,12 +93,11 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
 
-    # Pool = TUTTI i 90 numeri (nessuna restrizione)
     pool = list(range(1, 91))
     print(f"[*] Pool: tutti i 90 numeri")
 
     fp = extract_fingerprints(history)
-    print(f"[*] Fingerprint base: {fp['n_draws']} estrazioni")
+    print(f"[*] Fingerprint: {fp['n_draws']} estrazioni")
 
     fp_eng = None
     if FP_ADV:
@@ -120,7 +110,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    print(f"\n[*] Costruzione sestina (50% trend + 50% contrarian, no anti-crowd)...")
+    print(f"\n[*] Costruzione sestina CON CLUSTER SCORE...")
     p3 = AuroraPortfolioV3(history)
     portfolio_raw = p3.build_single(
         pool,
@@ -181,7 +171,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime, bias_result):
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
 
     return {
-        "version": "4.0",
+        "version": "4.1",
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
         "valore_attuale_rendita": round(valore_attuale_rendita(rendita), 2),
@@ -217,7 +207,7 @@ def format_report(payload):
     if not payload:
         return "❌ Nessun payload."
     lines = [
-        "🌅 AURORA ENGINE v4.0 — REPORT",
+        "🌅 AURORA ENGINE v4.1 — REPORT",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         f"💎 Rendita: € {payload['rendita_mensile']:,}/mese",
@@ -252,7 +242,7 @@ def format_report(payload):
             lines.append(f"   Somma {s['somma']}")
         lines.append("")
 
-    lines.append("🌅 Aurora Engine v4.0 — Super Win for Life")
+    lines.append("🌅 Aurora Engine v4.1 — Super Win for Life")
     return "\n".join(lines)
 
 
