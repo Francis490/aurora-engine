@@ -1,62 +1,17 @@
 {
-  "version": "4.1",
-  "updated_at": "2026-09-27T20:34:13",
+  "version": "5.0",
+  "updated_at": "2026-09-27T23:35:32",
   "rendita_mensile": 14030,
   "valore_attuale_rendita": 2773366.71,
-  "budget_mode": {
-    "mode": "MINIMO",
-    "emoji": "🟢",
-    "n_sestine": 1,
-    "costo": 2.0,
-    "msg": "EV negativo (strutturale). 1 sestina (2€)."
-  },
-  "n_sestinas": 1,
-  "costo_totale": 2.0,
-  "sestinas": [
-    {
-      "id": 1,
-      "profilo": "UNIFIED_CLUSTER",
-      "numeri": [
-        8,
-        17,
-        42,
-        63,
-        71,
-        85
-      ],
-      "somma": 286,
-      "score_profilo": 1.2211,
-      "fingerprint_detail": {
-        "composite": 0.132,
-        "transition": 0.0337,
-        "cooccurrence": 0.0108,
-        "gap_pattern": 0.4835,
-        "hot_cold": 0.0
-      }
-    }
-  ],
-  "bias_analysis": {
-    "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 63.23,
-    "is_uniform": true,
-    "has_hot_bias": false,
-    "has_cold_bias": false,
-    "has_autocorr": false,
-    "hot_numbers": [
-      18,
-      17,
-      49
-    ],
-    "cold_numbers": []
-  },
-  "ev": {
-    "ev_netto": -1.1319,
-    "ev_percentuale": -56.6
+  "next_contest": {
+    "number": 118,
+    "date": "28/09/2026",
+    "jackpot": 14030
   },
   "last_draw": {
-    "concorso": 117,
-    "data": "27/09/2026",
-    "numeri": [
+    "contest_number": 117,
+    "date": "27/09/2026",
+    "numbers": [
       1,
       23,
       26,
@@ -65,19 +20,95 @@
       81,
       82,
       86
-    ]
+    ],
+    "jolly": "—",
+    "superstar": "—"
   },
-  "next_draw": {
-    "concorso": 118,
-    "data": "28/09/2026",
-    "ora": "20:00"
+  "risk": {
+    "status": "🟢 SISTEMA ATTIVO",
+    "ev": null,
+    "level": "PLANNER",
+    "advice": "Gioca 2 sestine"
   },
-  "fingerprint_base": {
-    "n_draws": 117,
-    "sum_mean": 270.13
+  "budget_mode": {
+    "mode": "PLANNER",
+    "emoji": "🎯",
+    "n_sestinas": 2,
+    "cost_eur": 4.0,
+    "message": "2 sestine · €4.00"
   },
-  "regime_report": {
-    "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 117
-  }
+  "sestinas": [
+    {
+      "id": 1,
+      "profilo": "PLANNER",
+      "numeri": [
+        18,
+        25,
+        30,
+        41,
+        75,
+        82
+      ],
+      "somma": 271
+    },
+    {
+      "id": 2,
+      "profilo": "PLANNER",
+      "numeri": [
+        4,
+        25,
+        47,
+        60,
+        67,
+        68
+      ],
+      "somma": 271
+    }
+  ],
+  "titan_predictions": [
+    {
+      "id": "SESTINA 1",
+      "numbers": [
+        18,
+        25,
+        30,
+        41,
+        75,
+        82
+      ],
+      "sum": 271,
+      "z_score": 0.01,
+      "confidence": 20.0,
+      "signature": "—"
+    },
+    {
+      "id": "SESTINA 2",
+      "numbers": [
+        4,
+        25,
+        47,
+        60,
+        67,
+        68
+      ],
+      "sum": 271,
+      "z_score": 0.01,
+      "confidence": 20.0,
+      "signature": "—"
+    }
+  ],
+  "dodeca_pool": [
+    4,
+    18,
+    25,
+    30,
+    41,
+    47,
+    60,
+    67,
+    68,
+    75,
+    82
+  ],
+  "vortex": {}
 }
