@@ -1,6 +1,6 @@
 {
-  "version": "4.0",
-  "updated_at": "2026-09-27T20:08:42",
+  "version": "4.1",
+  "updated_at": "2026-09-27T20:34:13",
   "rendita_mensile": 14030,
   "valore_attuale_rendita": 2773366.71,
   "budget_mode": {
@@ -15,23 +15,23 @@
   "sestinas": [
     {
       "id": 1,
-      "profilo": "UNIFIED",
+      "profilo": "UNIFIED_CLUSTER",
       "numeri": [
-        5,
-        20,
-        31,
-        36,
-        64,
-        90
+        8,
+        17,
+        42,
+        63,
+        71,
+        85
       ],
-      "somma": 246,
-      "score_profilo": 14.9167,
+      "somma": 286,
+      "score_profilo": 1.2211,
       "fingerprint_detail": {
-        "composite": 0.1739,
-        "transition": 0.0246,
-        "cooccurrence": 0.0046,
-        "gap_pattern": 0.333,
-        "hot_cold": 0.3333
+        "composite": 0.132,
+        "transition": 0.0337,
+        "cooccurrence": 0.0108,
+        "gap_pattern": 0.4835,
+        "hot_cold": 0.0
       }
     }
   ],

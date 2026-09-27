@@ -186,12 +186,12 @@
       "costo_eur": 2.0,
       "sestine": [
         [
-          5,
-          20,
-          31,
-          36,
-          64,
-          90
+          8,
+          17,
+          42,
+          63,
+          71,
+          85
         ]
       ],
       "note": "Aurora Engine v4.0 — 1 sestina"
