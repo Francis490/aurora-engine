@@ -1,13 +1,15 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v4.0 — Portfolio senza anti-crowd + build_single random sampling.
+AURORA ENGINE v4.1 — Portfolio con CLUSTER SCORE (no distribuzione forzata).
 
-FIX (2026-09-26):
-- build_single usa campionamento casuale (200K) invece di iterazione esaustiva
-  (C(90,6) = 622M combinazioni → troppo pesante)
-- Anti-crowd rimosso dallo scoring
+Cambio di paradigma (2026-09-27):
+- Rimosso vincolo decadi >= 4
+- Aggiunto cluster_score: premia numeri vicini (gap piccoli)
+- La distribuzione è libera: le sestine possono concentrarsi in 2-3 decadi
+
+Filosofia: le estrazioni reali spesso si concentrano in cluster.
+Se la statistica dice che il pattern è "cluster + gap", il bot lo segue.
 """
-import itertools
 import random
 from collections import defaultdict
 from typing import List, Dict, Tuple, Optional
@@ -16,11 +18,6 @@ from typing import List, Dict, Tuple, Optional
 SUM_MIN = 240
 SUM_MAX = 310
 
-# Pesi compositi
-WEIGHT_A = 0.40
-WEIGHT_B = 0.30
-WEIGHT_C = 0.30
-
 
 class AuroraPortfolioV3:
 
@@ -28,16 +25,8 @@ class AuroraPortfolioV3:
         self.history = [d for d in history
                         if isinstance(d.get("numeri"), list) and len(d["numeri"]) == 8]
         self.n = len(self.history)
-        self._freq = self._compute_freq()
         self._gaps = self._compute_gaps()
         self._hot_recent = self._compute_hot_recent(window=10)
-
-    def _compute_freq(self) -> Dict[int, int]:
-        freq = defaultdict(int)
-        for d in self.history:
-            for n in d["numeri"]:
-                freq[n] += 1
-        return dict(freq)
 
     def _compute_gaps(self) -> Dict[int, int]:
         gaps = {n: self.n for n in range(1, 91)}
@@ -55,27 +44,47 @@ class AuroraPortfolioV3:
                 freq[n] += 1
         return dict(freq)
 
-    def _score_trend_follower(self, combo: Tuple[int, ...]) -> float:
+    # ==========================================
+    # SCORING v4.1 — con CLUSTER SCORE
+    # ==========================================
+    def _score_cluster(self, combo: Tuple[int, ...]) -> float:
+        """
+        Premia le sestine con numeri VICINI tra loro (cluster).
+        Penalizza i "buchi" enormi (gap singolo > 30).
+        """
+        s = sorted(combo)
+        gaps = [s[i + 1] - s[i] for i in range(5)]
+        avg_gap = sum(gaps) / 5.0
+        max_gap = max(gaps)
+
+        # Gap medio ideale: 10-15 (numeri vicini ma non adiacenti)
+        # Se avg_gap = 12 → bonus 1.0
+        # Se avg_gap = 24 → bonus 0.5
+        # Se avg_gap = 36 → bonus 0.25
+        gap_bonus = 1.0 / (1.0 + abs(avg_gap - 12) / 12.0)
+
+        # Penalità per gap enorme
+        if max_gap <= 25:
+            max_gap_penalty = 1.0
+        elif max_gap <= 35:
+            max_gap_penalty = 0.7
+        else:
+            max_gap_penalty = 0.4
+
+        return gap_bonus * max_gap_penalty
+
+    def _score_trend(self, combo: Tuple[int, ...]) -> float:
+        """Score: quanto i numeri sono 'caldi' recentemente."""
         hot_score = sum(self._hot_recent.get(n, 0) for n in combo) / 6.0
         s = sorted(combo)
         n_pari = sum(1 for x in s if x % 2 == 0)
-        n_low = sum(1 for x in s if x < 30)
-        n_high = sum(1 for x in s if x > 60)
         parity_ok = 1.0 if 2 <= n_pari <= 4 else 0.5
-        low_ok = 1.0 if 1 <= n_low <= 3 else 0.6
-        high_ok = 1.0 if 2 <= n_high <= 4 else 0.6
-        return hot_score * parity_ok * low_ok * high_ok
+        return hot_score * parity_ok
 
     def _score_contrarian(self, combo: Tuple[int, ...]) -> float:
+        """Score: quanto i numeri sono 'freddi' (gap alto)."""
         gaps = [self._gaps.get(n, 0) for n in combo]
         avg_gap = sum(gaps) / len(gaps) if gaps else 0
-        s = sorted(combo)
-        n_high = sum(1 for x in s if x > 60)
-        n_low = sum(1 for x in s if x < 30)
-        if n_high > 3:
-            return avg_gap * 0.5
-        if n_low < 1:
-            return avg_gap * 0.7
         return avg_gap
 
     def _portfolio_coverage(self, sestinas: List[List[int]]) -> float:
@@ -87,33 +96,22 @@ class AuroraPortfolioV3:
         unique_ratio = len(all_nums) / (6 * len(sestinas))
         decades = set((n - 1) // 10 for n in all_nums)
         decade_ratio = len(decades) / 9.0
-        n_low = sum(1 for n in all_nums if n < 30)
-        n_mid = sum(1 for n in all_nums if 30 <= n <= 60)
-        n_high = sum(1 for n in all_nums if n > 60)
-        total = len(all_nums)
-        balance = 1.0 - (
-            abs(n_low / total - 0.33) +
-            abs(n_mid / total - 0.33) +
-            abs(n_high / total - 0.33)
-        ) / 2.0
-        return 0.5 * unique_ratio + 0.3 * decade_ratio + 0.2 * balance
+        return 0.6 * unique_ratio + 0.4 * decade_ratio
 
     # ==========================================
-    # SESTINA UNIFICATA (1 sola) — v4.0 RANDOM SAMPLING
+    # SESTINA UNIFICATA (1 sola) — v4.1
     # ==========================================
     def build_single(self, pool: List[int], fp_engine=None,
                      crowd_model=None, bias_weights: Optional[Dict] = None,
                      verbose: bool = True) -> List[Dict]:
         """
-        Genera UNA sestina ottimale SENZA anti-crowd.
-
-        FIX (2026-09-26): usa campionamento casuale (200K) invece di
-        iterazione esaustiva C(90,6)=622M. Tempo: ~5-10s.
+        Genera UNA sestina ottimale SENZA anti-crowd,
+        CON cluster score.
         """
         if len(pool) < 6:
             return []
 
-        rng = random.Random(42)  # riproducibile
+        rng = random.Random(42)
 
         n_target = 200_000
         candidates_raw = []
@@ -162,13 +160,16 @@ class AuroraPortfolioV3:
         if not valid:
             valid = candidates_raw
 
-        # Score composito: 50% trend + 50% contrarian
+        # Score composito v4.1: 40% trend + 25% contrarian + 35% cluster
         scored = []
         for combo in valid:
-            s_trend = self._score_trend_follower(combo)
+            s_trend = self._score_trend(combo)
             s_contr = self._score_contrarian(combo)
-            composite = 0.5 * s_trend + 0.5 * s_contr
-            scored.append((combo, composite))
+            s_cluster = self._score_cluster(combo)
+            # Normalizza contrarian (avg_gap ~ 0-100) a 0-1
+            s_contr_norm = min(1.0, s_contr / 50.0)
+            composite = 0.40 * s_trend + 0.25 * s_contr_norm + 0.35 * s_cluster
+            scored.append((combo, composite, s_trend, s_contr_norm, s_cluster))
 
         scored.sort(key=lambda x: x[1], reverse=True)
 
@@ -177,51 +178,11 @@ class AuroraPortfolioV3:
 
         best = scored[0]
         if verbose:
-            print(f"[*] Migliore: {list(best[0])} (score {best[1]:.3f})")
+            print(f"[*] Migliore: {list(best[0])} (composite {best[1]:.3f})")
+            print(f"    trend={best[2]:.3f} contrarian={best[3]:.3f} cluster={best[4]:.3f}")
 
         return [{
-            "profilo": "UNIFIED",
+            "profilo": "UNIFIED_CLUSTER",
             "numeri": list(best[0]),
             "score_profilo": round(best[1], 4),
         }]
-
-    # ==========================================
-    # LEGACY: 3 sestine separate (non usato)
-    # ==========================================
-    def build(self, pool: List[int], fp_engine=None,
-              crowd_model=None, bias_weights: Optional[Dict] = None,
-              verbose: bool = True) -> List[Dict]:
-        if len(pool) < 6:
-            return []
-
-        all_combos = []
-        for combo in itertools.combinations(pool, 6):
-            ssum = sum(combo)
-            if SUM_MIN <= ssum <= SUM_MAX:
-                all_combos.append(combo)
-
-        scored = {
-            "A_trend": [],
-            "B_contrarian": [],
-            "C_coverage": [],
-        }
-        for combo in all_combos:
-            scored["A_trend"].append((combo, self._score_trend_follower(combo)))
-            scored["B_contrarian"].append((combo, self._score_contrarian(combo)))
-
-        if bias_weights:
-            for profile, items in scored.items():
-                w = bias_weights.get(profile, 1.0)
-                scored[profile] = [(c, s * w) for c, s in items]
-
-        portfolio = []
-        for profile, items in scored.items():
-            items.sort(key=lambda x: x[1], reverse=True)
-            if items:
-                portfolio.append({
-                    "profilo": profile,
-                    "numeri": list(items[0][0]),
-                    "score_profilo": round(items[0][1], 4),
-                })
-
-        return portfolio
