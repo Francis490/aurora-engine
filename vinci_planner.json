@@ -1,0 +1,32 @@
+{
+  "next_concorso": 118,
+  "fingerprint": {
+    "n_samples": 3276,
+    "sum_mean": 270.13,
+    "sum_std": 65.28,
+    "gap_mean": 12.8,
+    "gap_max": 71,
+    "decade_mean": 4.67,
+    "parity_mean": 2.94,
+    "high_mean": 1.93,
+    "low_mean": 2.02
+  },
+  "sestinas": [
+    [
+      18,
+      25,
+      30,
+      41,
+      75,
+      82
+    ],
+    [
+      4,
+      25,
+      47,
+      60,
+      67,
+      68
+    ]
+  ]
+}
