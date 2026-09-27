@@ -1,6 +1,7 @@
 """
 vinci_vita_planner.py
 Genera 2 sestine con la forma esatta delle estrazioni reali.
+Invia il report su Telegram.
 """
 import json
 import os
@@ -8,6 +9,9 @@ import sys
 import random
 import argparse
 import itertools
+import urllib.request
+import urllib.parse
+from datetime import datetime
 
 
 HISTORY_FILE = "vinci_history.json"
@@ -30,6 +34,31 @@ def save_json(fp, data):
     with open(fp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"[+] Salvato: {fp}")
+
+
+def send_telegram_message(text, parse_mode="HTML"):
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not bot_token or not chat_id:
+        print("[!] Token/chat_id mancanti. Telegram saltato.")
+        return False
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    try:
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": parse_mode,
+            "disable_web_page_preview": "true",
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        with urllib.request.urlopen(req, timeout=30) as response:
+            print(f"[+] Telegram: {response.status}")
+            return True
+    except Exception as e:
+        print(f"[!] Errore Telegram: {e}")
+        return False
 
 
 def extract_real_fingerprint(history):
@@ -147,6 +176,31 @@ def generate_sestinas(history, fp, n_sestinas=2):
     return selected
 
 
+def build_telegram_report(sestinas, fp, next_concorso):
+    lines = []
+    lines.append("🌅 <b>AURORA PLANNER</b>")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("")
+    lines.append(f"🎯 <b>PROSSIMO: Concorso N° {next_concorso}</b>")
+    lines.append("")
+    lines.append(f"📊 <b>Forma delle {fp['n_samples']} sestine reali:</b>")
+    lines.append(f"   • Somma media: {fp['sum_mean']}")
+    lines.append(f"   • Gap medio: {fp['gap_mean']}")
+    lines.append(f"   • Parità media: {fp['parity_mean']}")
+    lines.append("")
+    lines.append(f"🎲 <b>{len(sestinas)} SESTINE DA GIOCARE</b>")
+    lines.append("")
+    for i, (combo, score) in enumerate(sestinas, 1):
+        s = list(combo)
+        ssum = sum(s)
+        ns = " · ".join(str(n).zfill(2) for n in s)
+        lines.append(f"   {i}. <code>[{ns}]</code>")
+        lines.append(f"      Somma {ssum}")
+        lines.append("")
+    lines.append("🌅 <i>Aurora Planner — Super Win for Life</i>")
+    return "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=DEFAULT_N)
@@ -175,12 +229,8 @@ def main():
         sys.exit(1)
 
     print(f"\n[*] Forma delle {fp['n_samples']} sestine reali:")
-    print(f"    Somma:  {fp['sum_mean']} (sigma {fp['sum_std']})")
-    print(f"    Gap:    {fp['gap_mean']} (max {fp['gap_max']})")
-    print(f"    Decadi: {fp['decade_mean']}")
-    print(f"    Parita: {fp['parity_mean']}")
-    print(f"    Alti:   {fp['high_mean']}")
-    print(f"    Bassi:  {fp['low_mean']}")
+    print(f"    Somma:  {fp['sum_mean']}")
+    print(f"    Gap:    {fp['gap_mean']}")
 
     print(f"\n[*] Genero {args.n} sestine...")
     sestinas = generate_sestinas(history, fp, n_sestinas=args.n)
@@ -189,15 +239,7 @@ def main():
     for i, (combo, score) in enumerate(sestinas, 1):
         s = list(combo)
         ssum = sum(s)
-        gaps = [sorted(s)[j+1] - sorted(s)[j] for j in range(5)]
-        avg_gap = sum(gaps) / 5.0
-        decades = len(set((x - 1) // 10 for x in s))
-        pari = sum(1 for x in s if x % 2 == 0)
-        high = sum(1 for x in s if x > 60)
-        low = sum(1 for x in s if x < 30)
-        print(f"  {i}. {s}")
-        print(f"     Somma {ssum} | Gap {avg_gap:.1f} | Decadi {decades} | "
-              f"Pari {pari} | Alti {high} | Bassi {low}")
+        print(f"  {i}. {s} (somma {ssum})")
 
     output = {
         "next_concorso": next_concorso,
@@ -205,6 +247,12 @@ def main():
         "sestinas": [list(c) for c, _ in sestinas],
     }
     save_json("vinci_planner.json", output)
+
+    # Invia Telegram
+    print("\n[*] Invio Telegram...")
+    report = build_telegram_report(sestinas, fp, next_concorso)
+    send_telegram_message(report)
+
     print("\n" + "=" * 60)
 
 
