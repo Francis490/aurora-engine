@@ -1,25 +1,25 @@
 {
   "version": "5.0",
-  "updated_at": "2026-09-28T19:39:16",
-  "rendita_mensile": 14030,
-  "valore_attuale_rendita": 2773366.71,
+  "updated_at": "2026-09-28T21:17:14",
+  "rendita_mensile": 14070,
+  "valore_attuale_rendita": 2781273.67,
   "next_contest": {
-    "number": 118,
-    "date": "28/09/2026",
-    "jackpot": 14030
+    "number": 119,
+    "date": "29/09/2026",
+    "jackpot": 14070
   },
   "last_draw": {
-    "contest_number": 117,
-    "date": "27/09/2026",
+    "contest_number": 118,
+    "date": "28/09/2026",
     "numbers": [
-      1,
-      23,
-      26,
-      34,
-      48,
-      81,
-      82,
-      86
+      8,
+      11,
+      35,
+      37,
+      49,
+      52,
+      65,
+      84
     ],
     "jolly": "—",
     "superstar": "—"
