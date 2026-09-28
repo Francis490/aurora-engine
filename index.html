@@ -300,6 +300,8 @@
         .sestina-card.profile-A_trend { border-left-color: var(--aurora-purple); }
         .sestina-card.profile-B_contrarian { border-left-color: var(--solar); }
         .sestina-card.profile-C_coverage { border-left-color: var(--aurora-cyan); }
+        .sestina-card.profile-UNIFIED_CLUSTER { border-left-color: var(--aurora-cyan); }
+        .sestina-card.profile-UNIFIED { border-left-color: var(--aurora-pink); }
 
         .sestina-header {
             display: flex;
@@ -320,6 +322,8 @@
         .profile-A_trend .sestina-profile { color: var(--aurora-purple); }
         .profile-B_contrarian .sestina-profile { color: var(--solar); }
         .profile-C_coverage .sestina-profile { color: var(--aurora-cyan); }
+        .profile-UNIFIED_CLUSTER .sestina-profile { color: var(--aurora-cyan); }
+        .profile-UNIFIED .sestina-profile { color: var(--aurora-pink); }
 
         .sestina-ac {
             font-family: 'JetBrains Mono', monospace;
@@ -529,12 +533,17 @@
 
     function formatEuro(n) {
         if (typeof n !== "number" || !isFinite(n)) return "—";
-        return "€ " + n.toLocaleString("it-IT");
+        return "€ " + n.toLocaleString("it-IT", { maximumFractionDigits: 0 });
     }
 
     function formatNumber(n, decimals) {
         if (typeof n !== "number" || !isFinite(n)) return "—";
         return n.toFixed(decimals || 2);
+    }
+
+    function prettyProfile(name) {
+        if (!name) return "AURORA";
+        return String(name).replace(/_/g, " ").toUpperCase();
     }
 
     function showError(msg) {
@@ -553,7 +562,8 @@
         if (!draw) return;
 
         if (draw.concorso && draw.data) {
-            $("lastDrawTitle").textContent = "Ultima Estrazione — Concorso N° " + draw.concorso + " · " + draw.data;
+            $("lastDrawTitle").textContent =
+                "Ultima Estrazione — Concorso N° " + draw.concorso + " · " + draw.data;
         }
 
         var nums = draw.numeri || [];
@@ -572,19 +582,23 @@
 
         for (var i = 0; i < sestinas.length; i++) {
             var s = sestinas[i];
+            var profileRaw = s.profilo || "UNIFIED_CLUSTER";
             var card = document.createElement("div");
-            card.className = "sestina-card profile-" + (s.profilo || "A_trend");
+            card.className = "sestina-card profile-" + profileRaw;
 
             var header = document.createElement("div");
             header.className = "sestina-header";
             var prof = document.createElement("span");
             prof.className = "sestina-profile";
-            prof.textContent = s.profilo || "A_trend";
+            prof.textContent = prettyProfile(profileRaw);
             header.appendChild(prof);
-            var ac = document.createElement("span");
-            ac.className = "sestina-ac";
-            ac.textContent = "ACv3 " + formatNumber(s.anti_crowd_score, 2);
-            header.appendChild(ac);
+
+            if (typeof s.anti_crowd_score === "number") {
+                var ac = document.createElement("span");
+                ac.className = "sestina-ac";
+                ac.textContent = "ACv3 " + formatNumber(s.anti_crowd_score, 2);
+                header.appendChild(ac);
+            }
             card.appendChild(header);
 
             var numsDiv = document.createElement("div");
@@ -600,10 +614,14 @@
 
             var metrics = document.createElement("div");
             metrics.className = "sestina-metrics";
-            metrics.innerHTML =
-                "<span>Somma <strong>" + (s.somma || "—") + "</strong></span>" +
-                "<span>AC <strong>" + formatNumber(s.anti_crowd_score, 2) + "</strong></span>" +
-                (s.expected_share_eur ? "<span>Share <strong>" + formatEuro(s.expected_share_eur) + "</strong></span>" : "");
+            var html = "<span>Somma <strong>" + (s.somma || "—") + "</strong></span>";
+            if (typeof s.anti_crowd_score === "number") {
+                html += "<span>AC <strong>" + formatNumber(s.anti_crowd_score, 2) + "</strong></span>";
+            }
+            if (typeof s.expected_share_eur === "number" && s.expected_share_eur > 0) {
+                html += "<span>Share <strong>" + formatEuro(s.expected_share_eur) + "</strong></span>";
+            }
+            metrics.innerHTML = html;
             card.appendChild(metrics);
 
             grid.appendChild(card);
@@ -611,10 +629,16 @@
     }
 
     function renderBias(bias) {
-        if (!bias) return;
         var card = $("biasCard");
         var title = $("biasTitle");
         var body = $("biasBody");
+
+        if (!bias) {
+            title.textContent = "🧪 Nessun dato bias disponibile";
+            card.className = "bias-card";
+            body.textContent = "—";
+            return;
+        }
 
         var health = bias.health || "—";
         title.textContent = "🧪 " + health;
@@ -652,8 +676,12 @@
         // Bankroll
         var bs = data.bankroll_state || {};
         $("bankrollValue").textContent = formatEuro(bs.bankroll || 0);
-        if (bs.roi_pct !== undefined) {
-            $("bankrollSub").textContent = "ROI " + (bs.roi_pct >= 0 ? "+" : "") + formatNumber(bs.roi_pct, 2) + "% · DD " + formatNumber(bs.drawdown_pct || 0, 2) + "%";
+        if (typeof bs.roi_pct === "number") {
+            $("bankrollSub").textContent =
+                "ROI " + (bs.roi_pct >= 0 ? "+" : "") + formatNumber(bs.roi_pct, 2) +
+                "% · DD " + formatNumber(bs.drawdown_pct || 0, 2) + "%";
+        } else {
+            $("bankrollSub").textContent = "—";
         }
 
         // Status
@@ -682,8 +710,12 @@
         renderSestine(data.sestinas);
 
         // Footer
-        $("updatedAt").textContent = data.updated_at ? data.updated_at.replace("T", " ") : "—";
-        $("coverage").textContent = data.portfolio_coverage ? formatNumber(data.portfolio_coverage, 3) : "—";
+        $("updatedAt").textContent = data.updated_at
+            ? String(data.updated_at).replace("T", " ")
+            : "—";
+        $("coverage").textContent = (typeof data.portfolio_coverage === "number")
+            ? formatNumber(data.portfolio_coverage, 3)
+            : "—";
     }
 
     function load(silent) {
