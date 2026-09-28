@@ -19,7 +19,7 @@ DATABASE_FILE = "vinci_database.json"
 SUM_MIN = 240
 SUM_MAX = 310
 DEFAULT_N = 2
-RENDITA_MENSILE = 14030  # aggiornata manualmente
+RENDITA_MENSILE = 14070
 TASSO_SCONTO = 0.02
 DURATA_ANNI = 20
 
@@ -189,7 +189,6 @@ def generate_sestinas(history, fp, n_sestinas=2):
 
 
 def build_database(sestinas, history, next_concorso):
-    """Genera vinci_database.json nel formato atteso dalla dashboard."""
     now = datetime.now()
 
     last = history[-1] if history else {}
@@ -205,12 +204,11 @@ def build_database(sestinas, history, next_concorso):
 
     va = valore_attuale_rendita(RENDITA_MENSILE)
 
-    # titan_predictions = le sestine generate
     titan_predictions = []
     for i, (combo, score) in enumerate(sestinas, 1):
         s = list(combo)
         ssum = sum(s)
-        z = round((ssum - 270.13) / 65.28, 2)  # media e std dal fingerprint
+        z = round((ssum - 270.13) / 65.28, 2)
         titan_predictions.append({
             "id": f"SESTINA {i}",
             "numbers": s,
@@ -326,7 +324,6 @@ def main():
         ssum = sum(s)
         print(f"  {i}. {s} (somma {ssum})")
 
-    # Salva planner.json
     output = {
         "next_concorso": next_concorso,
         "fingerprint": fp,
@@ -334,11 +331,9 @@ def main():
     }
     save_json("vinci_planner.json", output)
 
-    # Salva database.json per la dashboard
     db = build_database(sestinas, history, next_concorso)
     save_json(DATABASE_FILE, db)
 
-    # Telegram
     print("\n[*] Invio Telegram...")
     report = build_telegram_report(sestinas, fp, next_concorso)
     send_telegram_message(report)
