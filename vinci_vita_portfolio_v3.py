@@ -1,14 +1,15 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v4.1 — Portfolio con CLUSTER SCORE (no distribuzione forzata).
+AURORA ENGINE v4.2 — Portfolio con CLUSTER SCORE + fingerprint engine.
+
+FIX (2026-09-29):
+- fp_engine ora è USATO davvero (score_sestina nel composite)
+- Nessuna enumerazione completa: usa random.sample
+- Rimosso il parametro crowd_model/bias_weights non usati
 
 Cambio di paradigma (2026-09-27):
 - Rimosso vincolo decadi >= 4
 - Aggiunto cluster_score: premia numeri vicini (gap piccoli)
-- La distribuzione è libera: le sestine possono concentrarsi in 2-3 decadi
-
-Filosofia: le estrazioni reali spesso si concentrano in cluster.
-Se la statistica dice che il pattern è "cluster + gap", il bot lo segue.
 """
 import random
 from collections import defaultdict
@@ -17,6 +18,7 @@ from typing import List, Dict, Tuple, Optional
 
 SUM_MIN = 240
 SUM_MAX = 310
+DEFAULT_SAMPLES = 100_000
 
 
 class AuroraPortfolioV3:
@@ -45,25 +47,16 @@ class AuroraPortfolioV3:
         return dict(freq)
 
     # ==========================================
-    # SCORING v4.1 — con CLUSTER SCORE
+    # SCORING
     # ==========================================
     def _score_cluster(self, combo: Tuple[int, ...]) -> float:
-        """
-        Premia le sestine con numeri VICINI tra loro (cluster).
-        Penalizza i "buchi" enormi (gap singolo > 30).
-        """
         s = sorted(combo)
         gaps = [s[i + 1] - s[i] for i in range(5)]
         avg_gap = sum(gaps) / 5.0
         max_gap = max(gaps)
 
-        # Gap medio ideale: 10-15 (numeri vicini ma non adiacenti)
-        # Se avg_gap = 12 → bonus 1.0
-        # Se avg_gap = 24 → bonus 0.5
-        # Se avg_gap = 36 → bonus 0.25
         gap_bonus = 1.0 / (1.0 + abs(avg_gap - 12) / 12.0)
 
-        # Penalità per gap enorme
         if max_gap <= 25:
             max_gap_penalty = 1.0
         elif max_gap <= 35:
@@ -74,7 +67,6 @@ class AuroraPortfolioV3:
         return gap_bonus * max_gap_penalty
 
     def _score_trend(self, combo: Tuple[int, ...]) -> float:
-        """Score: quanto i numeri sono 'caldi' recentemente."""
         hot_score = sum(self._hot_recent.get(n, 0) for n in combo) / 6.0
         s = sorted(combo)
         n_pari = sum(1 for x in s if x % 2 == 0)
@@ -82,7 +74,6 @@ class AuroraPortfolioV3:
         return hot_score * parity_ok
 
     def _score_contrarian(self, combo: Tuple[int, ...]) -> float:
-        """Score: quanto i numeri sono 'freddi' (gap alto)."""
         gaps = [self._gaps.get(n, 0) for n in combo]
         avg_gap = sum(gaps) / len(gaps) if gaps else 0
         return avg_gap
@@ -99,28 +90,26 @@ class AuroraPortfolioV3:
         return 0.6 * unique_ratio + 0.4 * decade_ratio
 
     # ==========================================
-    # SESTINA UNIFICATA (1 sola) — v4.1
+    # SESTINA UNIFICATA (1 sola) — v4.2
     # ==========================================
     def build_single(self, pool: List[int], fp_engine=None,
-                     crowd_model=None, bias_weights: Optional[Dict] = None,
-                     verbose: bool = True) -> List[Dict]:
+                     verbose: bool = True,
+                     n_samples: int = DEFAULT_SAMPLES,
+                     seed: int = 42) -> List[Dict]:
         """
-        Genera UNA sestina ottimale SENZA anti-crowd,
-        CON cluster score.
+        Genera UNA sestina ottimale.
+        Composite v4.2: 25% trend + 15% contrarian + 20% cluster + 40% fingerprint.
         """
         if len(pool) < 6:
             return []
 
-        rng = random.Random(42)
-
-        n_target = 200_000
-        candidates_raw = []
+        rng = random.Random(seed)
+        candidates = []
         seen = set()
-
         attempts = 0
-        max_attempts = n_target * 5
+        max_attempts = n_samples * 10
 
-        while len(candidates_raw) < n_target and attempts < max_attempts:
+        while len(candidates) < n_samples and attempts < max_attempts:
             attempts += 1
             try:
                 combo = tuple(sorted(rng.sample(pool, 6)))
@@ -130,21 +119,22 @@ class AuroraPortfolioV3:
                 continue
             seen.add(combo)
             if SUM_MIN <= sum(combo) <= SUM_MAX:
-                candidates_raw.append(combo)
+                candidates.append(combo)
 
         if verbose:
-            print(f"[*] Campioni validi (somma {SUM_MIN}-{SUM_MAX}): {len(candidates_raw)}")
+            print(f"[*] Campioni validi (somma {SUM_MIN}-{SUM_MAX}): {len(candidates)}")
 
-        if not candidates_raw:
+        if not candidates:
             return []
 
-        # Valida fingerprint (12/12) se disponibile
+        # Valida fingerprint 12/12
         valid = []
+        fp = None
         if fp_engine:
             try:
                 from vinci_vita_generator import validate_sestina, extract_fingerprints
                 fp = extract_fingerprints(self.history)
-                for combo in candidates_raw:
+                for combo in candidates:
                     ok, _, _ = validate_sestina(list(combo), fp)
                     if ok:
                         valid.append(combo)
@@ -153,23 +143,34 @@ class AuroraPortfolioV3:
             except Exception as e:
                 if verbose:
                     print(f"[!] Fingerprint check errore: {e}")
-                valid = candidates_raw
+                valid = candidates
         else:
-            valid = candidates_raw
+            valid = candidates
 
         if not valid:
-            valid = candidates_raw
+            valid = candidates
 
-        # Score composito v4.1: 40% trend + 25% contrarian + 35% cluster
+        # Composite scoring v4.2
         scored = []
         for combo in valid:
             s_trend = self._score_trend(combo)
             s_contr = self._score_contrarian(combo)
-            s_cluster = self._score_cluster(combo)
-            # Normalizza contrarian (avg_gap ~ 0-100) a 0-1
             s_contr_norm = min(1.0, s_contr / 50.0)
-            composite = 0.40 * s_trend + 0.25 * s_contr_norm + 0.35 * s_cluster
-            scored.append((combo, composite, s_trend, s_contr_norm, s_cluster))
+            s_cluster = self._score_cluster(combo)
+
+            fp_score = 0.5
+            if fp_engine:
+                try:
+                    fp_score = fp_engine.score_sestina(list(combo))["composite"]
+                except Exception:
+                    pass
+
+            composite = (0.25 * s_trend +
+                         0.15 * s_contr_norm +
+                         0.20 * s_cluster +
+                         0.40 * fp_score)
+
+            scored.append((combo, composite, s_trend, s_contr_norm, s_cluster, fp_score))
 
         scored.sort(key=lambda x: x[1], reverse=True)
 
@@ -179,7 +180,8 @@ class AuroraPortfolioV3:
         best = scored[0]
         if verbose:
             print(f"[*] Migliore: {list(best[0])} (composite {best[1]:.3f})")
-            print(f"    trend={best[2]:.3f} contrarian={best[3]:.3f} cluster={best[4]:.3f}")
+            print(f"    trend={best[2]:.3f} contrarian={best[3]:.3f} "
+                  f"cluster={best[4]:.3f} fingerprint={best[5]:.3f}")
 
         return [{
             "profilo": "UNIFIED_CLUSTER",
