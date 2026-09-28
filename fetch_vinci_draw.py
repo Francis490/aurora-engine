@@ -2,14 +2,14 @@
 fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da AGIMEG.
 
-FIX (2026-09-23):
-- Fonte AGIMEG (Sisal bloccato da anti-bot comportamentale)
-- Parser con 4 strategie a cascata
-- Nessuna dipendenza da playwright/curl_cffi
+FIX (2026-09-29):
+- find_article_url_for_date: regex semplificata, filtra URL per data
+- Il pattern precedente richiedeva la data subito dopo il prefisso,
+  ma gli URL reali la contengono in mezzo
 
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
-    python fetch_vinci_draw.py --backfill 30  # recupera ultimi 30 giorni
+    python fetch_vinci_draw.py --backfill 30
 """
 import json
 import os
@@ -19,7 +19,6 @@ import time
 from datetime import datetime, timedelta
 
 import requests
-from bs4 import BeautifulSoup
 
 
 HISTORY_FILE = "vinci_history.json"
@@ -29,7 +28,6 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
-
 HEADERS = {
     "User-Agent": USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -95,7 +93,9 @@ def parse_article(html, verbose=True):
         result["concorso"] = int(m.group(1))
 
     m = re.search(
-        r"Super Win for Life\s+(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})",
+        r"Super Win for Life\s+(\d{1,2})\s+"
+        r"(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|"
+        r"settembre|ottobre|novembre|dicembre)\s+(\d{4})",
         text, re.IGNORECASE
     )
     if m:
@@ -108,7 +108,8 @@ def parse_article(html, verbose=True):
 
     if not numbers:
         m = re.search(
-            r"(?:è|sono|vincente|estratti|combinazione)[\s:]*((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
+            r"(?:è|sono|vincente|estratti|combinazione)[\s:]*"
+            r"((?:\d{1,2}\s*[–\-·,]\s*){7}\d{1,2})",
             text, re.IGNORECASE
         )
         if m:
@@ -161,6 +162,10 @@ def parse_article(html, verbose=True):
 
 
 def find_article_url_for_date(data):
+    """
+    Trova URL articolo AGIMEG per una data specifica.
+    Filtra gli URL 'super-win-for-life-*' che contengono 'gg-mese-aaaa'.
+    """
     search_url = build_search_url(data)
     html = fetch_url(search_url)
     if not html:
@@ -168,18 +173,10 @@ def find_article_url_for_date(data):
 
     data_str = f"{data.day}-{MESI_IT_INV[data.month]}-{data.year}"
     pattern = re.compile(
-        rf'href="(https://www\.agimeg\.it/super-win-for-life-{data_str}[^"]*)"',
-        re.IGNORECASE
-    )
-    matches = pattern.findall(html)
-    if matches:
-        return matches[0]
-
-    pattern2 = re.compile(
         r'href="(https://www\.agimeg\.it/super-win-for-life-[^"]*)"',
         re.IGNORECASE
     )
-    for url in pattern2.findall(html):
+    for url in pattern.findall(html):
         if data_str in url:
             return url
     return None
