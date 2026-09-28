@@ -2,27 +2,31 @@
 vinci_vita_generator.py
 AURORA ENGINE — Generatore sestine Super Win for Life.
 
-Genera sestine statisticamente INDISTINGUIBILI dalle estrazioni reali
-di Super Win for Life (8 numeri estratti da 90, 6 giocati).
+FIX (2026-09-29):
+- Rimosso itertools.combinations(pool, 6) su pool da 90 → crash OOM
+- Sostituito con random sampling (target configurabile)
+- Il main di test usa pool ridotto
 
+Genera sestine statisticamente INDISTINGUIBILI dalle estrazioni reali.
 Non predice. Riproduce la distribuzione reale.
 """
 import json
 import os
 import math
-import itertools
+import random
 from typing import List, Tuple, Dict, Optional
 
 
 HISTORY_FILE = "vinci_history.json"
 
-# Range hard per la somma
 SUM_HARD_MIN = 240
 SUM_HARD_MAX = 310
 
 N_ESTRATTI = 8
 N_GIOCATI = 6
 N_TOTALI = 90
+
+DEFAULT_SAMPLES = 100_000
 
 
 # ==========================================
@@ -47,8 +51,17 @@ def extract_fingerprints(history: list) -> dict:
         nums = draw.get("numeri", [])
         if len(nums) != 8:
             continue
-        for combo in itertools.combinations(nums, 6):
-            all_sestinas.append(list(combo))
+        # Enumerazione C(8,6) = 28 combo per estrazione → sicura
+        for i in range(8):
+            for j in range(i + 1, 8):
+                for k in range(j + 1, 8):
+                    for l in range(k + 1, 8):
+                        for m in range(l + 1, 8):
+                            for n in range(m + 1, 8):
+                                all_sestinas.append(sorted([
+                                    nums[i], nums[j], nums[k],
+                                    nums[l], nums[m], nums[n]
+                                ]))
 
     if not all_sestinas:
         return default_fingerprints()
@@ -149,7 +162,7 @@ def default_fingerprints() -> dict:
 
 
 # ==========================================
-# ANTI-CROWD
+# ANTI-CROWD (statico, deprecato — usare vinci_vita_crowd.CrowdModel)
 # ==========================================
 def anti_crowd_weight(number: int) -> float:
     if 1 <= number <= 31:
@@ -189,6 +202,10 @@ def anti_crowd_score(sestina: list) -> float:
 # ==========================================
 def validate_sestina(sestina: list, fp: dict) -> Tuple[bool, float, dict]:
     if len(sestina) != 6:
+        return False, 0.0, {}
+    if len(set(sestina)) != 6:
+        return False, 0.0, {}
+    if not all(1 <= n <= 90 for n in sestina):
         return False, 0.0, {}
 
     s = sorted(sestina)
@@ -238,31 +255,49 @@ def validate_sestina(sestina: list, fp: dict) -> Tuple[bool, float, dict]:
 
 
 # ==========================================
-# GENERATOR
+# GENERATOR (random sampling — NO enumerazione completa)
 # ==========================================
 def generate_sestinas(pool: list, fp: dict, n_sestinas: int = 2,
-                      candidates: int = 5000) -> List[list]:
+                      samples: int = DEFAULT_SAMPLES,
+                      seed: int = 42) -> List[list]:
     if len(pool) < 6:
         return []
 
-    all_combos = list(itertools.combinations(pool, 6))
-
+    rng = random.Random(seed)
     valid = []
-    for combo in all_combos:
-        ok, score, checks = validate_sestina(combo, fp)
+    seen = set()
+    attempts = 0
+    max_attempts = samples * 10
+
+    while len(valid) < samples and attempts < max_attempts:
+        attempts += 1
+        try:
+            combo = tuple(sorted(rng.sample(pool, 6)))
+        except ValueError:
+            break
+        if combo in seen:
+            continue
+        seen.add(combo)
+
+        # Filtro somma rapido prima del validate completo
+        ssum = sum(combo)
+        if not (SUM_HARD_MIN <= ssum <= SUM_HARD_MAX):
+            continue
+
+        ok, score, _ = validate_sestina(list(combo), fp)
         if ok:
             valid.append((combo, score))
 
     if not valid:
-        print(f"[!] Nessuna sestina 12/12. Fallback con somma nel range hard.")
-        scored = []
-        for combo in all_combos:
-            if not (SUM_HARD_MIN <= sum(combo) <= SUM_HARD_MAX):
-                continue
-            ok, score, _ = validate_sestina(combo, fp)
-            scored.append((combo, score))
-        scored.sort(key=lambda x: x[1], reverse=True)
-        valid = scored[:candidates]
+        print("[!] Nessuna sestina 12/12. Fallback su somma hard.")
+        fallback = []
+        for _ in range(samples):
+            combo = tuple(sorted(rng.sample(pool, 6)))
+            if SUM_HARD_MIN <= sum(combo) <= SUM_HARD_MAX:
+                ok, score, _ = validate_sestina(list(combo), fp)
+                fallback.append((combo, score))
+        fallback.sort(key=lambda x: x[1], reverse=True)
+        valid = fallback[:samples]
     else:
         print(f"[+] {len(valid)} sestine con 12/12 fingerprint")
 
@@ -289,7 +324,6 @@ def generate_sestinas(pool: list, fp: dict, n_sestinas: int = 2,
 def generate_aurora_sestinas(history: list, pool: list,
                              n_sestinas: int = 2) -> Tuple[List[list], dict]:
     fp = extract_fingerprints(history)
-
     print(f"[+] Fingerprint: {fp['n_draws']} estrazioni ({fp['n_samples']} sestine virtuali)")
     print(f"    • Somma: μ={fp['sum_mean']}, σ={fp['sum_std']}")
     print(f"    • Range hard: {SUM_HARD_MIN}-{SUM_HARD_MAX}")
@@ -299,12 +333,17 @@ def generate_aurora_sestinas(history: list, pool: list,
 
 
 if __name__ == "__main__":
-    test_history = [
-        {"concorso": i, "data": "01/09/2026",
-         "numeri": [5, 8, 17, 34, 48, 65, 80, 89]}
-        for i in range(1, 21)
-    ]
-    test_pool = list(range(1, 91))
+    # Test con pool ridotto per evitare tempi lunghi
+    import random as _r
+    _r.seed(1)
+    test_history = []
+    for i in range(1, 31):
+        test_history.append({
+            "concorso": i, "data": "01/09/2026",
+            "numeri": sorted(_r.sample(range(1, 91), 8))
+        })
+    # Pool ridotto a 30 numeri per il test
+    test_pool = list(range(1, 31))
 
     sestinas, fp = generate_aurora_sestinas(test_history, test_pool, n_sestinas=3)
     print("\n=== SESTINE GENERATE ===")
