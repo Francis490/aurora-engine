@@ -2,8 +2,9 @@
 vinci_vita_math.py
 AURORA ENGINE — Modulo matematico Super Win for Life (Vinci per la Vita)
 
-FIX (2026-09-25):
-- Rendita aggiornata a €13.990/mese
+FIX (2026-09-29):
+- Rendita unificata a €14.070/mese (era 14.030 in alcuni moduli, 14.070 in altri)
+- Tabella premi allineata al dato reale documentato (4 punti = €178,59)
 
 Matematica ESATTA del gioco:
 - Probabilità ipergeometriche (8 estratti da 90, 6 giocati)
@@ -24,12 +25,14 @@ NUMERI_GIOCATI = 6
 COSTO_GIOCATA_EUR = 2.00
 PAYOUT_RATIO = 0.65
 
-# Rendita
-RENDITA_ATTUALE_MENSILE = 14_030
-RENDITA_MINIMA_TOTALE = 2_429_875
+# Rendita (UNICA FONTE DI VERITÀ)
+RENDITA_ATTUALE_MENSILE = 14_070
 DURATA_RENDITA_ANNI = 20
 MESI_PER_ANNO = 12
 TASSO_SCONTO_ANNUO = 0.02
+
+# Valore minimo garantito (20 anni di rendita minima)
+RENDITA_MINIMA_TOTALE = 2_429_875
 
 
 # ==========================================
@@ -78,9 +81,9 @@ def valore_nominale_rendita(rendita_mensile: float,
 # 3. TABELLA PREMI
 # ==========================================
 TABELLA_PREMI_MEDIA = {
-    6: None,
+    6: None,          # rendita → calcolata dinamicamente
     5: 15_000.0,
-    4: 170.66,
+    4: 178.59,        # allineato a SESSION_LOG (2026-09-19)
     3: 22.06,
     2: 5.00,
     1: 0.0,
@@ -166,42 +169,27 @@ def kelly_analysis(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
 # 6. SOGLIE BUDGET
 # ==========================================
 def soglie_budget(rendita_mensile: float = RENDITA_ATTUALE_MENSILE) -> Dict:
-    """
-    Soglie di budget ricalibrate per l'EV strutturale del gioco.
-    """
     ev_data = calcola_ev(rendita_mensile)
     ev = ev_data["ev_netto"]
 
     if ev < -1.50:
-        return {
-            "mode": "SKIP", "emoji": "🚫", "n_sestine": 0, "costo": 0.0,
-            "msg": "⚠️ EV anomalo. Verifica dati. Nessuna sestina.",
-        }
+        return {"mode": "SKIP", "emoji": "🚫", "n_sestine": 0, "costo": 0.0,
+                "msg": "⚠️ EV anomalo. Verifica dati. Nessuna sestina."}
     elif ev < -1.20:
-        return {
-            "mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
-            "msg": "EV molto negativo (strutturale). 1 sestina (2€).",
-        }
+        return {"mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
+                "msg": "EV molto negativo (strutturale). 1 sestina (2€)."}
     elif ev < -1.00:
-        return {
-            "mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
-            "msg": "EV negativo (strutturale). 1 sestina (2€).",
-        }
+        return {"mode": "MINIMO", "emoji": "🟢", "n_sestine": 1, "costo": 2.0,
+                "msg": "EV negativo (strutturale). 1 sestina (2€)."}
     elif ev < -0.80:
-        return {
-            "mode": "NORMALE", "emoji": "🟡", "n_sestine": 2, "costo": 4.0,
-            "msg": "EV nella media del gioco. 2 sestine (4€).",
-        }
+        return {"mode": "NORMALE", "emoji": "🟡", "n_sestine": 2, "costo": 4.0,
+                "msg": "EV nella media del gioco. 2 sestine (4€)."}
     elif ev < -0.60:
-        return {
-            "mode": "ATTACK", "emoji": "🟠", "n_sestine": 3, "costo": 6.0,
-            "msg": "EV meno negativo del solito. 3 sestine (6€).",
-        }
+        return {"mode": "ATTACK", "emoji": "🟠", "n_sestine": 3, "costo": 6.0,
+                "msg": "EV meno negativo del solito. 3 sestine (6€)."}
     else:
-        return {
-            "mode": "ALL-IN", "emoji": "🔥", "n_sestine": 5, "costo": 10.0,
-            "msg": "EV quasi neutro! 5 sestine (10€).",
-        }
+        return {"mode": "ALL-IN", "emoji": "🔥", "n_sestine": 5, "costo": 10.0,
+                "msg": "EV quasi neutro! 5 sestine (10€)."}
 
 
 # ==========================================
