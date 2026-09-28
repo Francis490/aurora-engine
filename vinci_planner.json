@@ -2,31 +2,72 @@
   "next_concorso": 119,
   "fingerprint": {
     "n_samples": 3304,
+    "n_draws": 118,
     "sum_mean": 270.01,
     "sum_std": 65.08,
-    "gap_mean": 12.81,
+    "sum_min": 48,
+    "sum_max": 444,
+    "parity_distribution": {
+      "0": 42,
+      "1": 330,
+      "2": 828,
+      "3": 1098,
+      "4": 693,
+      "5": 249,
+      "6": 64
+    },
+    "decade_distribution": [
+      2100,
+      2415,
+      2331,
+      1911,
+      2583,
+      2121,
+      2184,
+      1869,
+      2310
+    ],
+    "first_min": 1,
+    "first_max": 61,
+    "first_mean": 13.47,
+    "last_min": 17,
+    "last_max": 90,
+    "last_mean": 77.51,
     "gap_max": 71,
-    "decade_mean": 4.68,
-    "parity_mean": 2.93,
-    "high_mean": 1.93,
-    "low_mean": 2.01
+    "gap_avg": 12.81,
+    "consec_pairs_avg": 0.31,
+    "low_min": 0,
+    "low_max": 6,
+    "high_min": 0,
+    "high_max": 6,
+    "last_digit_mean": 27.59,
+    "last_digit_std": 6.95,
+    "mod5_distribution": [
+      3696,
+      4158,
+      4095,
+      3822,
+      4053
+    ],
+    "spread_min": 14,
+    "spread_max": 89
   },
   "sestinas": [
     [
-      18,
-      25,
-      30,
-      41,
-      75,
-      82
+      8,
+      26,
+      28,
+      49,
+      58,
+      71
     ],
     [
-      4,
-      25,
-      47,
-      60,
-      67,
-      68
+      8,
+      18,
+      26,
+      49,
+      71,
+      87
     ]
   ]
 }
