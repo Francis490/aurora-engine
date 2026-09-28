@@ -2,11 +2,17 @@ name: Aurora Planner
 
 on:
   schedule:
-    - cron: '30 19 * * *'
+    # 20:30 UTC+2 (dopo il sync delle 19:30) — eseguito dopo l'estrazione
+    - cron: '30 18 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# STESSO GROUP del workflow vinci_sync.yml → serializzazione
+concurrency:
+  group: aurora-sync-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   planner:
@@ -28,7 +34,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add vinci_planner.json vinci_database.json
+          for f in vinci_planner.json vinci_database.json vinci_bankroll.json; do
+            [ -f "$f" ] && git add "$f" || true
+          done
           if git diff --cached --quiet; then
             echo "Nessuna modifica."
           else
