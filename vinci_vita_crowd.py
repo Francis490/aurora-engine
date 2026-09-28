@@ -2,17 +2,10 @@
 vinci_vita_crowd.py
 AURORA ENGINE v3 — Modello bayesiano dinamico del crowding.
 
-Formula implementata (semplificata):
-    C(s) = Σ_n w_birth(n) · w_superst(n) · w_pattern(n) · M_context
-
-dove:
-    w_birth   = probabilità che n sia una data di nascita (1-31: alta)
-    w_superst = peso superstizione (3, 7, 13, 17, 22, 33)
-    w_pattern = penalità pattern visivi (consecutivi, decadi, ecc.)
-    M_context = moltiplicatore di contesto (giorno, jackpot)
-
-Il crowding stimato viene combinato con l'anti-crowd statico
-per produrre uno score finale "atteso valore condizionato alla vincita".
+FIX (2026-09-29):
+- Normalizzazione del crowding (media ~1.0 per sestina random)
+- Rimosso clamp superiore a 10 che appiattiva tutti i valori
+- Uso della media geometrica per la superstizione (non prodotto)
 
 Uso:
     from vinci_vita_crowd import CrowdModel
@@ -28,43 +21,37 @@ from typing import List, Dict, Optional
 # ==========================================
 # PESI BASE
 # ==========================================
-# Peso "data di nascita": numeri 1-31 sono i più giocati
-BIRTHDAY_WEIGHTS = {
-    n: 1.0 if 1 <= n <= 31 else 0.5
-    for n in range(1, 91)
-}
+BIRTHDAY_WEIGHTS = {n: (1.0 if 1 <= n <= 31 else 0.5) for n in range(1, 91)}
 
-# Numeri superstiziosi in Italia (peso extra)
+# Media attesa del peso birthday per una sestina uniforme da 90:
+# 31/90 * 1.0 + 59/90 * 0.5 = 0.3444 + 0.3278 = 0.6722
+BIRTHDAY_BASELINE = 0.6722
+
 SUPERSTITION_WEIGHTS = {
     3: 1.4, 7: 1.5, 13: 1.3, 17: 1.2,
     22: 1.2, 33: 1.1, 77: 1.1,
 }
 
-# Peso pattern
+
 def pattern_penalty(sestina: List[int]) -> float:
-    """Penalità se la sestina ha pattern visivamente popolari."""
     s = sorted(sestina)
     penalty = 1.0
 
-    # Consecutivi
     consec = sum(1 for i in range(len(s) - 1) if s[i + 1] - s[i] == 1)
     if consec >= 2:
         penalty *= 1.5
     elif consec == 1:
         penalty *= 1.1
 
-    # Decadi concentrate
     decades = set((n - 1) // 10 for n in s)
     if len(decades) <= 2:
         penalty *= 1.4
 
-    # Multipli di 5 o 10
     if all(n % 5 == 0 for n in s):
         penalty *= 1.3
     if all(n % 10 == 0 for n in s):
         penalty *= 1.5
 
-    # Estremi popolari (1, 2, 3, 89, 90)
     extremes = sum(1 for n in s if n in (1, 2, 3, 89, 90))
     if extremes >= 2:
         penalty *= 1.2
@@ -77,27 +64,17 @@ def pattern_penalty(sestina: List[int]) -> float:
 # ==========================================
 def context_multiplier(date_str: Optional[str] = None,
                        jackpot: Optional[float] = None) -> float:
-    """
-    Stima quanti più giocatori del solito ci sono in un certo contesto.
-    Valori > 1.0 = più crowding = meno vincita pro capite.
-    """
     m = 1.0
-
-    # Giorno della settimana
     if date_str:
         try:
             dt = datetime.strptime(date_str, "%d/%m/%Y")
-            weekday = dt.weekday()  # 0=lun, 6=dom
-            # Weekend = più giocate
+            weekday = dt.weekday()
             if weekday >= 5:
                 m *= 1.15
-            # Venerdì sera = picco
             if weekday == 4:
                 m *= 1.10
         except Exception:
             pass
-
-    # Jackpot alto = più giocate
     if jackpot:
         if jackpot > 15_000_000:
             m *= 1.25
@@ -105,7 +82,6 @@ def context_multiplier(date_str: Optional[str] = None,
             m *= 1.15
         elif jackpot > 10_000_000:
             m *= 1.05
-
     return m
 
 
@@ -123,75 +99,48 @@ class CrowdModel:
 
     def estimate_crowding(self, sestina: List[int]) -> float:
         """
-        Stima il "peso di crowding" della sestina.
-        Valori più alti = più giocata = vincita pro capite più bassa.
+        Stima il peso di crowding. 1.0 = sestina media.
+        >1.0 = più giocata del solito.
+        <1.0 = meno giocata del solito.
         """
         if not sestina:
             return 1.0
 
-        # Base: somma dei pesi birthday
-        birthday_score = sum(BIRTHDAY_WEIGHTS.get(n, 1.0) for n in sestina)
+        # Media del peso birthday, normalizzata alla baseline
+        birthday_avg = sum(BIRTHDAY_WEIGHTS.get(n, 1.0) for n in sestina) / len(sestina)
+        birthday_norm = birthday_avg / BIRTHDAY_BASELINE
 
-        # Moltiplicatore superstizione
-        superst_score = 1.0
-        for n in sestina:
-            if n in SUPERSTITION_WEIGHTS:
-                superst_score *= SUPERSTITION_WEIGHTS[n]
+        # Media geometrica dei pesi superstizione
+        s_weights = [SUPERSTITION_WEIGHTS.get(n, 1.0) for n in sestina]
+        prod = 1.0
+        for w in s_weights:
+            prod *= w
+        superst_geo = prod ** (1.0 / len(s_weights))
 
-        # Moltiplicatore pattern
-        pattern_score = pattern_penalty(sestina)
+        pattern = pattern_penalty(sestina)
+        context = self.m_context
 
-        # Moltiplicatore contesto
-        context_score = self.m_context
-
-        # Crowding complessivo (normalizzato: media = 1.0)
-        crowd = (birthday_score / 6.0) * superst_score * pattern_score * context_score
-
+        crowd = birthday_norm * superst_geo * pattern * context
         return round(crowd, 4)
 
     def anti_crowd_score_v3(self, sestina: List[int]) -> float:
-        """
-        Anti-crowd score v3: inverso del crowding.
-        Range: 0.1 (popolarissima) - 10+ (rarissima).
-        """
         crowd = self.estimate_crowding(sestina)
         if crowd <= 0:
-            return 10.0
+            return 20.0
         score = 10.0 / crowd
-        return round(max(0.1, min(10.0, score)), 4)
+        return round(max(0.1, score), 4)
 
     def expected_share(self, sestina: List[int],
                        total_jackpot_value: float = 2_729_878) -> float:
-        """
-        Stima il valore atteso pro capite della rendita in caso di 6 punti.
-
-        Assunzione: N giocatori totali stimati ~ 50.000.000
-        Frazione che gioca la sestina ~ crowd / 90^6 * costante
-
-        Questo è il pezzo che risponde alla tua domanda:
-        "Se vinco, quanto prendo?"
-        """
-        # Approssimazione: ogni sestina ha P = 1/622M di essere giocata
-        # Il crowding relativo modula questa probabilità
         crowd = self.estimate_crowding(sestina)
-
-        # Giocatori italiani (stima)
         N_PLAYERS = 50_000_000
-
-        # Frazione che gioca questa sestina
         base_prob = 1 / 622_614_630
         effective_prob = base_prob * crowd
-
-        # Vincitori attesi
         expected_winners = max(1.0, N_PLAYERS * effective_prob)
-
-        # Rendita pro capite
         share = total_jackpot_value / expected_winners
-
         return round(share, 2)
 
     def report(self, sestina: List[int]) -> Dict:
-        """Report completo del crowding per una sestina."""
         return {
             "crowd_index": self.estimate_crowding(sestina),
             "anti_crowd_score": self.anti_crowd_score_v3(sestina),
@@ -201,13 +150,9 @@ class CrowdModel:
         }
 
 
-# ==========================================
-# CONFRONTO
-# ==========================================
 def compare_sestinas(sestinas: List[List[int]],
                      date_str: Optional[str] = None,
                      jackpot: Optional[float] = None):
-    """Confronta il crowding di più sestine."""
     print("=" * 70)
     print("CONFRONTO CROWDING — AURORA v3")
     print("=" * 70)
@@ -215,13 +160,7 @@ def compare_sestinas(sestinas: List[List[int]],
     print()
 
     model = CrowdModel(date_str=date_str, jackpot=jackpot)
-
-    rows = []
-    for i, s in enumerate(sestinas, 1):
-        r = model.report(s)
-        rows.append((i, s, r))
-
-    # Ordina per anti_crowd_score decrescente
+    rows = [(i, s, model.report(s)) for i, s in enumerate(sestinas, 1)]
     rows.sort(key=lambda x: x[2]["anti_crowd_score"], reverse=True)
 
     for i, s, r in rows:
@@ -230,26 +169,18 @@ def compare_sestinas(sestinas: List[List[int]],
         print(f"    AC v3:    {r['anti_crowd_score']:.3f}")
         print(f"    Share:    €{r['expected_share_eur']:,.0f} (se 6 punti)")
         print()
-
     print("=" * 70)
     return rows
 
 
-# ==========================================
-# TEST
-# ==========================================
 if __name__ == "__main__":
     test_sestinas = [
-        [3, 5, 35, 60, 67, 70],       # popolare (3, 5, 35 consecutivi)
-        [5, 30, 31, 34, 65, 80],      # media
-        [20, 33, 56, 59, 61, 67],     # anti-crowd
-        [11, 16, 48, 59, 67, 68],     # anti-crowd v2
-        [1, 2, 3, 4, 5, 6],           # MOLTO popolare
-        [11, 23, 41, 58, 72, 89],     # generata, mix
+        [3, 5, 35, 60, 67, 70],
+        [5, 30, 31, 34, 65, 80],
+        [20, 33, 56, 59, 61, 67],
+        [11, 16, 48, 59, 67, 68],
+        [1, 2, 3, 4, 5, 6],
+        [11, 23, 41, 58, 72, 89],
     ]
-
-    compare_sestinas(
-        test_sestinas,
-        date_str="21/09/2026",
-        jackpot=13_810 * 20 * 12,  # valore attuale rendita
-    )
+    compare_sestinas(test_sestinas, date_str="21/09/2026",
+                     jackpot=13_810 * 20 * 12)
