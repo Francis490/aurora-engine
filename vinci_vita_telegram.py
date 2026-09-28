@@ -1,6 +1,10 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v4.0 — Bot Telegram sender (sestina unica, no anti-crowd).
+AURORA ENGINE v5.0 — Bot Telegram sender.
+
+FIX (2026-09-29):
+- Integra BankrollManager: registra lo stake quando un nuovo concorso
+  viene aggiunto a vinci_played.json (no doppio conteggio)
 """
 import json
 import os
@@ -12,7 +16,6 @@ from datetime import datetime
 
 
 PLAYED_FILE = "vinci_played.json"
-
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
 
@@ -25,21 +28,17 @@ def send_telegram_message(text, parse_mode="HTML"):
         return False
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-
     if len(text) > TELEGRAM_MESSAGE_LIMIT:
         text = text[:TELEGRAM_MESSAGE_LIMIT - 3] + "..."
 
     try:
         data = urllib.parse.urlencode({
-            "chat_id": chat_id,
-            "text": text,
+            "chat_id": chat_id, "text": text,
             "parse_mode": parse_mode,
             "disable_web_page_preview": "true",
         }).encode("utf-8")
-
         req = urllib.request.Request(url, data=data, method="POST")
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
-
         with urllib.request.urlopen(req, timeout=30) as response:
             print(f"[+] Messaggio Telegram inviato! ({response.status})")
             return True
@@ -51,15 +50,12 @@ def send_telegram_message(text, parse_mode="HTML"):
 def send_telegram_report_smart(text):
     if len(text) <= TELEGRAM_SPLIT_THRESHOLD:
         return send_telegram_message(text)
-
     mid = len(text) // 2
     split_pos = text.rfind("\n\n", 0, mid + 500)
     if split_pos < 1000:
         split_pos = mid
-
     part1 = text[:split_pos].rstrip()
     part2 = text[split_pos:].lstrip()
-
     print(f"[*] Report splittato: parte 1 ({len(part1)}), parte 2 ({len(part2)})")
     ok1 = send_telegram_message(part1)
     ok2 = send_telegram_message(part2)
@@ -85,6 +81,17 @@ def save_played(data):
         print(f"[!] Errore salvataggio {PLAYED_FILE}: {e}")
 
 
+def _update_bankroll_for_new_play(costo):
+    """Registra lo stake nel bankroll SOLO quando il concorso è nuovo."""
+    try:
+        from vinci_vita_bankroll import BankrollManager
+        bm = BankrollManager()
+        bm.record_play(stake=costo, won=0.0)
+        print(f"[+] Bankroll aggiornato: -€{costo:.2f}")
+    except Exception as e:
+        print(f"[!] Bankroll update fallito: {e}")
+
+
 def record_play_in_file(payload):
     played = load_played()
     sestinas = payload.get("sestinas", [])
@@ -96,6 +103,7 @@ def record_play_in_file(payload):
     data = next_draw.get("data")
     costo = payload.get("costo_totale", 0.0)
 
+    # Se già presente, aggiorna e basta (no bankroll)
     for p in played["played"]:
         if p.get("concorso") == concorso:
             p["sestine"] = [s["numeri"] for s in sestinas]
@@ -105,17 +113,20 @@ def record_play_in_file(payload):
             save_played(played)
             return
 
+    # Nuovo concorso → registra
     played["played"].append({
         "concorso": concorso,
         "data": data,
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v4.0 — {len(sestinas)} sestina",
+        "note": f"Aurora Engine v5.0 — {len(sestinas)} sestina",
     })
-
     save_played(played)
     print(f"[+] Registrato concorso {concorso} in {PLAYED_FILE}")
+
+    # Bankroll update
+    _update_bankroll_for_new_play(costo)
 
 
 def format_telegram_report(payload):
@@ -123,7 +134,7 @@ def format_telegram_report(payload):
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v4.0</b>")
+    lines.append("🌅 <b>AURORA ENGINE v5.0</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
@@ -143,8 +154,7 @@ def format_telegram_report(payload):
         lines.append("")
 
     if payload.get("regime_report"):
-        h = payload["regime_report"]["health"]
-        lines.append(f"🔬 {h}")
+        lines.append(f"🔬 {payload['regime_report']['health']}")
         lines.append("")
 
     nd = payload.get("next_draw", {})
@@ -174,19 +184,20 @@ def format_telegram_report(payload):
     sestinas = payload.get("sestinas", [])
     if sestinas:
         costo = payload.get("costo_totale", 0)
-        lines.append(f"🎲 <b>SESTINA (€{costo:.2f})</b>")
+        lines.append(f"🎲 <b>SESTINE (€{costo:.2f})</b>")
         for s in sestinas:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
             lines.append(f"   Somma {s['somma']}")
+            if s.get("anti_crowd_score") is not None:
+                lines.append(f"   ACv3 {s['anti_crowd_score']:.2f}")
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b>")
         lines.append("")
 
-    lines.append("🌅 <i>Aurora Engine v4.0 — Super Win for Life</i>")
+    lines.append("🌅 <i>Aurora Engine v5.0 — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
     return "\n".join(lines)
 
 
@@ -205,7 +216,7 @@ def main():
         return
 
     print("=" * 65)
-    print("AURORA ENGINE v4.0 — TELEGRAM DISPATCH")
+    print("AURORA ENGINE v5.0 — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
@@ -215,7 +226,6 @@ def main():
         sys.exit(1)
 
     payload = run_engine()
-
     if not payload:
         print("[!] Payload vuoto.")
         sys.exit(1)
@@ -236,7 +246,6 @@ def main():
     print()
     print("[*] Invio report a Telegram...")
     ok = send_telegram_report_smart(report)
-
     if ok:
         print("[+] Report inviato con successo!")
     else:
