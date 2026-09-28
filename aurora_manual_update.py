@@ -2,17 +2,16 @@
 aurora_manual_update.py
 AURORA ENGINE — Manual update da GitHub Actions form.
 
+FIX (2026-09-29):
+- Aggiunto controllo unicità degli 8 numeri
+- Validazione più severa (data valida, concorso positivo)
+
 Legge input da variabili d'ambiente:
 - MANUAL_CONCORSO       numero concorso (es. 112)
 - MANUAL_DATA           data DD/MM/YYYY (es. 22/09/2026)
 - MANUAL_NUMERI         8 numeri separati da virgola
 - MANUAL_SESTINE        (opzionale) sestine giocate, formato:
                         "16,35,46,51,66,68 | 5,22,30,34,65,84"
-                        (sestine separate da |)
-
-Aggiorna:
-- vinci_history.json    (aggiunge estrazione)
-- vinci_played.json     (aggiunge giocate, se fornite)
 """
 import json
 import os
@@ -45,7 +44,6 @@ def save_json(fp, data):
 
 
 def parse_numeri(s):
-    """'23,42,47,...' -> [23, 42, 47, ...]"""
     if not s:
         return []
     nums = []
@@ -58,34 +56,42 @@ def parse_numeri(s):
 
 
 def parse_sestine(s):
-    """'16,35,46,51,66,68 | 5,22,30,34,65,84' -> [[...], [...]]"""
     if not s or not s.strip():
         return []
     result = []
     for block in s.split("|"):
         nums = parse_numeri(block)
-        if len(nums) == 6 and all(1 <= n <= 90 for n in nums):
+        # Validazione: 6 numeri distinti in 1-90
+        if (len(nums) == 6
+                and len(set(nums)) == 6
+                and all(1 <= n <= 90 for n in nums)):
             result.append(nums)
     return result
 
 
 def validate_data(data_str):
-    """Verifica formato DD/MM/YYYY."""
-    return bool(re.match(r"^\d{2}/\d{2}/\d{4}$", data_str))
+    if not re.match(r"^\d{2}/\d{2}/\d{4}$", data_str):
+        return False
+    try:
+        datetime.strptime(data_str, "%d/%m/%Y")
+        return True
+    except ValueError:
+        return False
 
 
 def update_history(concorso, data, numeri):
-    """Aggiunge/aggiorna estrazione in vinci_history.json."""
     history = load_json(HISTORY_FILE, [])
 
     if len(numeri) != 8:
         print(f"[!] Errore: servono 8 numeri, trovati {len(numeri)}")
         return False
+    if len(set(numeri)) != 8:
+        print(f"[!] Errore: gli 8 numeri devono essere DISTINTI")
+        return False
     if not all(1 <= n <= 90 for n in numeri):
         print(f"[!] Errore: numeri fuori range 1-90")
         return False
 
-    # Verifica duplicati
     for h in history:
         if h.get("concorso") == concorso:
             print(f"[*] Concorso {concorso} già presente, aggiorno.")
@@ -94,15 +100,13 @@ def update_history(concorso, data, numeri):
             save_json(HISTORY_FILE, history)
             return True
 
-    # Aggiungi in fondo
     history.append({
         "concorso": concorso,
         "data": data,
         "numeri": numeri,
-        "url": "manual-update"
+        "url": "manual-update",
     })
 
-    # Ordina cronologicamente
     def sort_key(x):
         try:
             dt = datetime.strptime(x.get("data", ""), "%d/%m/%Y")
@@ -117,7 +121,6 @@ def update_history(concorso, data, numeri):
 
 
 def update_played(concorso, data, sestine):
-    """Aggiunge giocate in vinci_played.json."""
     if not sestine:
         print("[*] Nessuna sestina giocata fornita.")
         return True
@@ -127,7 +130,6 @@ def update_played(concorso, data, sestine):
         "played": []
     })
 
-    # Verifica duplicati
     for p in played["played"]:
         if p.get("concorso") == concorso:
             print(f"[*] Giocata concorso {concorso} già presente, aggiorno.")
@@ -145,7 +147,6 @@ def update_played(concorso, data, sestine):
         "sestine": sestine,
         "note": f"Manual update — {len(sestine)} sestine"
     })
-
     played["played"].sort(key=lambda x: x.get("concorso", 0))
     save_json(PLAYED_FILE, played)
     print(f"[+] {len(sestine)} sestine aggiunte a {PLAYED_FILE}")
@@ -162,7 +163,6 @@ def main():
     numeri_raw = os.environ.get("MANUAL_NUMERI", "").strip()
     sestine_raw = os.environ.get("MANUAL_SESTINE", "").strip()
 
-    # Validazione
     errors = []
 
     try:
@@ -174,13 +174,19 @@ def main():
         concorso = 0
 
     if not validate_data(data):
-        errors.append(f"data deve essere DD/MM/YYYY: '{data}'")
+        errors.append(f"data deve essere DD/MM/YYYY valida: '{data}'")
 
     numeri = parse_numeri(numeri_raw)
     if len(numeri) != 8:
         errors.append(f"numeri: servono 8 valori, trovati {len(numeri)}")
+    elif len(set(numeri)) != 8:
+        errors.append("numeri: gli 8 valori devono essere DISTINTI")
+    elif not all(1 <= n <= 90 for n in numeri):
+        errors.append("numeri: fuori range 1-90")
 
     sestine = parse_sestine(sestine_raw)
+    if sestine_raw.strip() and not sestine:
+        errors.append("sestine: formato non valido o numeri duplicati")
 
     if errors:
         print("\n[!] ERRORI DI VALIDAZIONE:")
@@ -188,14 +194,12 @@ def main():
             print(f"    - {e}")
         sys.exit(1)
 
-    # Info
     print(f"\n[*] Concorso:      {concorso}")
     print(f"[*] Data:          {data}")
     print(f"[*] Numeri:        {numeri}")
     print(f"[*] Sestine:       {sestine if sestine else '(nessuna)'}")
     print()
 
-    # Aggiorna
     ok1 = update_history(concorso, data, numeri)
     ok2 = update_played(concorso, data, sestine)
 
