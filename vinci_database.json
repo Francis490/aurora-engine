@@ -1,6 +1,6 @@
 {
   "version": "5.2",
-  "updated_at": "2026-09-29T00:47:28",
+  "updated_at": "2026-09-29T00:54:53",
   "rendita_mensile": 14070,
   "valore_attuale_rendita": 2781273.67,
   "budget_mode": {
@@ -27,7 +27,7 @@
       "somma": 240,
       "score_profilo": 0.8559,
       "anti_crowd_score": 8.963,
-      "expected_share_eur": 2611154.37
+      "expected_share_eur": 2499264.7
     },
     {
       "id": 2,
@@ -43,7 +43,7 @@
       "somma": 284,
       "score_profilo": 0.8195,
       "anti_crowd_score": 10.0827,
-      "expected_share_eur": 2623993.09
+      "expected_share_eur": 2523548.42
     }
   ],
   "portfolio_coverage": 0.8111,
