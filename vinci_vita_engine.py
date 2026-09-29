@@ -1,13 +1,10 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v5.0 — Orchestratore con schema database unificato.
+AURORA ENGINE v5.1 — Orchestratore con schema database unificato.
 
 FIX (2026-09-29):
-- Schema di output unificato: compatibile al 100% con index.html
-- Integrato CrowdModel (anti_crowd_score, expected_share_eur)
-- Integrato BankrollManager (bankroll_state)
-- Aggiunto portfolio_coverage
-- Versione database allineata a "5.0"
+- DATABASE_VERSION allineato a "5.1" (coerente con vinci_vita_planner)
+- resto invariato rispetto a v5.0
 """
 import json
 import os
@@ -60,7 +57,7 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
-DATABASE_VERSION = "5.0"
+DATABASE_VERSION = "5.1"
 
 
 def load_history():
@@ -87,12 +84,10 @@ def _next_draw_info(history):
     ld = history[-1] if history else {}
     lc = ld.get("concorso", "N/A")
     ldate = ld.get("data", "N/A")
-
     try:
         nc = int(lc) + 1
     except (ValueError, TypeError):
         nc = 1
-
     if ldate != "N/A":
         try:
             dt = datetime.strptime(ldate, "%d/%m/%Y")
@@ -101,7 +96,6 @@ def _next_draw_info(history):
             nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
     else:
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
-
     return lc, ldate, ld.get("numeri", []), nc, nd
 
 
@@ -125,14 +119,12 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
-    # --- Bias ---
     bias_result = None
     if BIAS_OK:
         print(f"\n[*] Analisi bias...")
         bias_result = quick_bias_check(history, verbose=True)
         print(f"[*] {bias_result['health']}")
 
-    # --- Regime ---
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -144,12 +136,10 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
-    # --- Math ---
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
 
-    # --- Fingerprint ---
     pool = list(range(1, 91))
     fp = extract_fingerprints(history)
     print(f"[*] Fingerprint: {fp['n_draws']} estrazioni")
@@ -165,7 +155,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    # --- Portfolio ---
     print(f"\n[*] Costruzione sestina...")
     p3 = AuroraPortfolioV3(history)
     portfolio_raw = p3.build_single(pool, fp_engine=fp_eng, verbose=True)
@@ -174,7 +163,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         print("[!] Portfolio vuoto.")
         return None
 
-    # --- Crowd ---
     crowd_model = CrowdModel() if CROWD_OK else None
 
     sdata = []
@@ -200,7 +188,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         })
         print(f"  {i}. [{item['profilo']}] {s} | somma {ssum}")
 
-    # --- Bankroll ---
     bankroll_state = None
     if BANKROLL_OK:
         try:
@@ -209,7 +196,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         except Exception as e:
             print(f"[!] Bankroll errore: {e}")
 
-    # --- Coverage ---
     coverage = _portfolio_coverage(sdata)
 
     payload = build_payload(history, sdata, budget, rendita, ev, fp, regime,
@@ -223,7 +209,7 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime,
     now = datetime.now()
     lc, ldate, ln, nc, nd = _next_draw_info(history)
 
-    payload = {
+    return {
         "version": DATABASE_VERSION,
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "rendita_mensile": rendita,
@@ -257,7 +243,6 @@ def build_payload(history, sdata, budget, rendita, ev, fp, regime,
             "sum_mean": fp["sum_mean"] if fp else None,
         } if fp else None,
     }
-    return payload
 
 
 def format_report(payload):
