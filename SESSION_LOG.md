@@ -68,11 +68,26 @@
 
 ---
 
-## Template nuova sessione
+## 2026-09-29 — Estrazione Win for Life concorso 119
 
-### YYYY-MM-DD — Titolo
-**Obiettivo:**
+**Obiettivo:** Registrare l'estrazione giornaliera per il dataset Aurora.
+
 **Fatto:**
+- Estrazione Super Win for Life del **29/09/2026** (Concorso **119**)
+- Numeri estratti: `[9, 26, 35, 42, 54, 57, 70, 72]`
+- Rendita in palio: €14.110/anno per 20 anni
+- **Nessuna sestina Aurora generata** (Fase 4 non ancora implementata)
+- **Nessuna giocata utente registrata** per il concorso 119
+
 **Problemi:**
+- Buco nel dataset: concorsi 110→119 mai registrati (10 giorni di estrazioni mancanti)
+- Aurora Engine è fermo al 20/09, esattamente 10 giorni fa
+
 **Decisioni:**
+- Cross-check con Venus Vortex: i numeri **26** e **72** sono usciti sia al SuperEnalotto 156 sia al Win for Life 119 lo stesso giorno (29/09). Coincidenza rilevante per analisi future.
+- Priorità assoluta: implementare Fase 4 (bot Telegram) per evitare ulteriori buchi nel dataset.
+
 **Prossimo:**
+- Scrivere `vinci_vita_telegram.py` (Fase 4)
+- Backfill concorsi 110→119 via `fetch_vinci_draw.py`
+- Fase 5 (workflow + PWA)
