@@ -1,6 +1,6 @@
 {
-  "version": "5.1",
-  "updated_at": "2026-09-29T00:26:25",
+  "version": "5.2",
+  "updated_at": "2026-09-29T00:47:28",
   "rendita_mensile": 14070,
   "valore_attuale_rendita": 2781273.67,
   "budget_mode": {
@@ -8,10 +8,10 @@
     "emoji": "🟢",
     "n_sestine": 1,
     "costo": 2.0,
-    "msg": "EV negativo (strutturale). 1 sestina (2€)."
+    "msg": "EV negativo. 1 sestina (2€)."
   },
-  "n_sestinas": 1,
-  "costo_totale": 2.0,
+  "n_sestinas": 2,
+  "costo_totale": 4.0,
   "sestinas": [
     {
       "id": 1,
@@ -28,9 +28,25 @@
       "score_profilo": 0.8559,
       "anti_crowd_score": 8.963,
       "expected_share_eur": 2611154.37
+    },
+    {
+      "id": 2,
+      "profilo": "UNIFIED_CLUSTER",
+      "numeri": [
+        16,
+        26,
+        48,
+        60,
+        63,
+        71
+      ],
+      "somma": 284,
+      "score_profilo": 0.8195,
+      "anti_crowd_score": 10.0827,
+      "expected_share_eur": 2623993.09
     }
   ],
-  "portfolio_coverage": 0.8222,
+  "portfolio_coverage": 0.8111,
   "bankroll_state": {
     "initial_bankroll": 100.0,
     "bankroll": 98.0,
@@ -70,8 +86,8 @@
     "n": 118
   },
   "ev": {
-    "ev_netto": -1.1286,
-    "ev_percentuale": -56.43
+    "ev_netto": -1.0123,
+    "ev_percentuale": -50.61
   },
   "last_draw": {
     "concorso": 118,
