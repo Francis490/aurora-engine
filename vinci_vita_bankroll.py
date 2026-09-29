@@ -1,25 +1,16 @@
 """
 vinci_vita_bankroll.py
-AURORA ENGINE v2 — Bankroll adattivo (Kelly frazionario).
+AURORA ENGINE v2.1 — Bankroll adattivo (Kelly frazionario).
+
+FIX (2026-09-29):
+- Aggiunto metodo record_win() per registrare una vincita post-estrazione
+- Il metodo record_play() resta per lo stake iniziale
 
 Gestione ottimale del capitale con:
 1. Kelly fraction limitata (max 5% per giocata)
 2. Adattamento alla varianza osservata
 3. Stop-loss e take-profit dinamici
 4. Tracking persistente dello stato (vinci_bankroll.json)
-
-Approccio:
-- Kelly puro è troppo aggressivo → usiamo Kelly/4 (quarter-Kelly)
-- Cap massimo 5% del bankroll per singola sessione
-- Stop-loss: -20% dal picco → stop per 3 giorni
-- Take-profit: +50% → prelievo del 30%
-
-Uso:
-    from vinci_vita_bankroll import BankrollManager
-    bm = BankrollManager(initial_bankroll=100.0)
-    stake = bm.calculate_stake(ev_netto=-0.5, costo=2.0)
-    bm.record_play(stake=2.0, won=178.59)
-    bm.print_state()
 """
 import json
 import os
@@ -31,9 +22,6 @@ BANKROLL_FILE = "vinci_bankroll.json"
 
 
 class BankrollManager:
-    """
-    Gestore del bankroll con Kelly frazionario e stop dinamici.
-    """
 
     def __init__(self,
                  initial_bankroll: float = 100.0,
@@ -42,14 +30,6 @@ class BankrollManager:
                  stop_loss_pct: float = 0.20,
                  take_profit_pct: float = 0.50,
                  load_state: bool = True):
-        """
-        :param initial_bankroll: capitale iniziale (se non c'è stato salvato)
-        :param kelly_fraction: frazione di Kelly da usare (0.25 = quarter-Kelly)
-        :param max_stake_pct: stake massimo per sessione (% del bankroll)
-        :param stop_loss_pct: stop-loss dal picco (%)
-        :param take_profit_pct: take-profit dal capitale iniziale (%)
-        :param load_state: se True, carica da vinci_bankroll.json
-        """
         self.kelly_fraction = kelly_fraction
         self.max_stake_pct = max_stake_pct
         self.stop_loss_pct = stop_loss_pct
@@ -61,7 +41,6 @@ class BankrollManager:
                 self._restore(state)
                 return
 
-        # Stato iniziale
         self.initial_bankroll = initial_bankroll
         self.bankroll = initial_bankroll
         self.peak = initial_bankroll
@@ -103,7 +82,7 @@ class BankrollManager:
             "initial_bankroll": self.initial_bankroll,
             "bankroll": round(self.bankroll, 2),
             "peak": round(self.peak, 2),
-            "stake_history": self.stake_history[-100:],  # ultime 100
+            "stake_history": self.stake_history[-100:],
             "win_history": self.win_history[-100:],
             "total_wagered": round(self.total_wagered, 2),
             "total_won": round(self.total_won, 2),
@@ -126,7 +105,6 @@ class BankrollManager:
     # STOP-LOSS / TAKE-PROFIT
     # ==========================================
     def is_stopped(self) -> bool:
-        """Ritorna True se il bankroll è in stop-loss attivo."""
         if self.stop_until is None:
             return False
         try:
@@ -135,7 +113,6 @@ class BankrollManager:
             return False
 
     def _check_stop_loss(self):
-        """Verifica se attivare lo stop-loss."""
         if self.peak <= 0:
             return
         dd = (self.peak - self.bankroll) / self.peak
@@ -147,7 +124,6 @@ class BankrollManager:
                   f"{stop_until.strftime('%d/%m/%Y %H:%M')}")
 
     def _check_take_profit(self):
-        """Verifica se attivare il take-profit."""
         if self.initial_bankroll <= 0:
             return
         gain = (self.bankroll - self.initial_bankroll) / self.initial_bankroll
@@ -156,26 +132,12 @@ class BankrollManager:
             self.bankroll -= prelievo
             print(f"[+] TAKE-PROFIT attivato: guadagno {gain*100:.1f}%. "
                   f"Prelievo €{prelievo:.2f}. Bankroll: €{self.bankroll:.2f}")
-            # Reset iniziale per non ripetere
             self.initial_bankroll = self.bankroll
 
     # ==========================================
     # CALCOLO STAKE
     # ==========================================
     def calculate_stake(self, ev_netto: float, costo_giocata: float) -> float:
-        """
-        Calcola lo stake ottimale per la prossima sessione.
-
-        Al Super Win for Life l'EV è strutturalmente negativo, quindi
-        Kelly puro darebbe f* < 0 (non giocare). Usiamo invece:
-        - Kelly frazionario applicato al "miglior caso" (hit rate osservato)
-        - Cap a max_stake_pct del bankroll
-        - Minimizzazione dello stake quando EV è molto negativo
-
-        :param ev_netto: EV netto per giocata (es. -0.70)
-        :param costo_giocata: costo unitario (es. 2.00)
-        :return: stake in € da giocare (0 se stop attivo)
-        """
         if self.is_stopped():
             print(f"[*] Stop-loss attivo. Stake = 0")
             return 0.0
@@ -185,21 +147,15 @@ class BankrollManager:
                   f"€{costo_giocata:.2f})")
             return 0.0
 
-        # Kelly frazionario: usiamo EV come proxy (più basso = meno stake)
-        # Normalizzato: se EV >= 0 → stake massimo, se EV <= -1 → stake minimo
         ev_clamped = max(-1.0, min(0.0, ev_netto))
-        # Da -1 (worst) a 0 (best): factor 0.2 → 1.0
         ev_factor = 0.2 + 0.8 * (1 + ev_clamped)
 
-        # Stake base: massimo consentito * kelly_fraction * ev_factor
         base_stake = self.bankroll * self.max_stake_pct * self.kelly_fraction
-        stake = base_stake * ev_factor * 4  # normalizzato
+        stake = base_stake * ev_factor * 4
 
-        # Cap a max_stake_pct
         max_stake = self.bankroll * self.max_stake_pct
         stake = min(stake, max_stake)
 
-        # Arrotonda a multipli di costo_giocata
         n_giocate = max(0, int(stake / costo_giocata))
         stake_effettivo = n_giocate * costo_giocata
 
@@ -209,11 +165,7 @@ class BankrollManager:
     # REGISTRAZIONE
     # ==========================================
     def record_play(self, stake: float, won: float):
-        """
-        Registra una giocata.
-        :param stake: importo speso
-        :param won: importo vinto (0 se perso)
-        """
+        """Registra una giocata con stake e vincita (per uso storico)."""
         if stake <= 0:
             return
 
@@ -226,11 +178,9 @@ class BankrollManager:
             self.total_won += won
             self.n_wins += 1
 
-        # Aggiorna picco
         if self.bankroll > self.peak:
             self.peak = self.bankroll
 
-        # Storico
         self.stake_history.append({
             "ts": datetime.now().isoformat(),
             "stake": stake,
@@ -245,10 +195,35 @@ class BankrollManager:
                 "net": round(won - stake, 2),
             })
 
-        # Check stop
         self._check_stop_loss()
         self._check_take_profit()
+        self.save()
 
+    def record_win(self, premio: float, note: str = ""):
+        """
+        Registra SOLO una vincita (usato dal check post-estrazione).
+        Non tocca lo stake, che è già stato registrato in record_play.
+        """
+        if premio <= 0:
+            print(f"[*] Premio <= 0, niente da registrare.")
+            return
+
+        self.bankroll += premio
+        self.total_won += premio
+        self.n_wins += 1
+
+        if self.bankroll > self.peak:
+            self.peak = self.bankroll
+
+        self.win_history.append({
+            "ts": datetime.now().isoformat(),
+            "stake": 0.0,
+            "won": premio,
+            "net": round(premio, 2),
+            "note": note,
+        })
+
+        self._check_take_profit()
         self.save()
 
     # ==========================================
@@ -281,7 +256,7 @@ class BankrollManager:
     def print_state(self):
         s = self.get_state()
         print("=" * 65)
-        print("AURORA ENGINE v2 — BANKROLL STATE")
+        print("AURORA ENGINE — BANKROLL STATE")
         print("=" * 65)
         print(f"Capitale iniziale:  € {s['initial_bankroll']:>10.2f}")
         print(f"Bankroll attuale:   € {s['bankroll']:>10.2f}")
@@ -304,25 +279,16 @@ class BankrollManager:
         print("=" * 65)
 
 
-# ==========================================
-# TEST
-# ==========================================
 if __name__ == "__main__":
-    # Simula un bankroll da €100
     bm = BankrollManager(initial_bankroll=100.0, load_state=False)
-
     print("=== Simulazione bankroll ===\n")
-
-    # Simula 10 giocate
     for i in range(1, 11):
         stake = bm.calculate_stake(ev_netto=-0.70, costo_giocata=2.0)
-        # Simula esiti: 1 vincita grossa al giro 5
         won = 0.0
         if i == 5:
             won = 178.59
         bm.record_play(stake=stake, won=won)
         print(f"Giocata {i}: stake €{stake:.2f} | won €{won:.2f} | "
               f"bankroll €{bm.bankroll:.2f}")
-
     print()
     bm.print_state()
