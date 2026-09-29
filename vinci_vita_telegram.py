@@ -1,11 +1,11 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v5.1 — Bot Telegram sender.
+AURORA ENGINE v5.2 — Bot Telegram sender.
 
-FIX (2026-09-29):
-- Versione allineata a v5.1 (coerente con engine e planner)
-- Mostra expected_share_eur se presente
-- Conteggio sestine coerente con payload
+FIX (2026-09-29 v2):
+- Versione allineata a 5.2
+- Rimossa "Share stimata" dal report (resta nel DB, non è affidabile)
+- Budget message ora coerente col numero reale di sestine generate
 """
 import json
 import os
@@ -19,7 +19,7 @@ from datetime import datetime
 PLAYED_FILE = "vinci_played.json"
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
-DATABASE_VERSION = "5.1"
+DATABASE_VERSION = "5.2"
 
 
 def send_telegram_message(text, parse_mode="HTML"):
@@ -176,32 +176,34 @@ def format_telegram_report(payload):
         lines.append(f"   <code>{ns}</code>")
         lines.append("")
 
-    bm = payload.get("budget_mode", {})
-    lines.append(f"🎛️ <b>BUDGET: {bm.get('mode', 'N/A')}</b>")
-    if bm.get("msg"):
-        lines.append(f"   {bm['msg']}")
-    lines.append("")
+    # Budget: coerente col numero reale di sestine generate
+    sestinas = payload.get("sestinas", [])
+    n_real = len(sestinas)
+    costo_real = payload.get("costo_totale", n_real * 2.0)
+
+    if n_real == 0:
+        lines.append("🎛️ <b>BUDGET: SKIP</b>")
+        lines.append("   Nessuna sestina generata.")
+        lines.append("")
+    else:
+        lines.append(f"🎛️ <b>BUDGET: {_plural_sestine(n_real).upper()}</b>")
+        lines.append(f"   {n_real} {_plural_sestine(n_real)} · €{costo_real:.2f}")
+        lines.append("")
 
     if payload.get("ev"):
         ev = payload["ev"]
         lines.append(f"⚡ <b>EV:</b> €{ev['ev_netto']:+.4f} "
-                     f"({ev['ev_percentuale']:+.2f}%)")
+                     f"({ev['ev_percentuale']:+.2f}%) <i>[stima]</i>")
         lines.append("")
 
-    sestinas = payload.get("sestinas", [])
     if sestinas:
-        costo = payload.get("costo_totale", 0)
-        n = len(sestinas)
-        lines.append(f"🎲 <b>{n} {_plural_sestine(n)} (€{costo:.2f})</b>")
+        lines.append(f"🎲 <b>{n_real} {_plural_sestine(n_real)}</b>")
         for s in sestinas:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
             lines.append(f"   Somma {s['somma']}")
             if s.get("anti_crowd_score") is not None:
                 lines.append(f"   ACv3 {s['anti_crowd_score']:.2f}")
-            if s.get("expected_share_eur") is not None:
-                share = s["expected_share_eur"]
-                lines.append(f"   Share stimata: €{share:,.0f}")
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b>")
