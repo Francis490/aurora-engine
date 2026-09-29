@@ -1,17 +1,15 @@
 """
 vinci_vita_planner.py
-AURORA ENGINE v5.0 — Planner: genera 1 sestina con schema unificato.
+AURORA ENGINE v5.1 — Planner: N sestine con overlap controllato.
 
 FIX (2026-09-29):
-- Schema di output UNIFICATO con vinci_vita_engine.py
-- Rendita importata da vinci_vita_math (single source of truth)
-- Rimossi titan_predictions/dodeca_pool fittizi
-- Rimosso valore_attuale_rendita duplicato
+- Usa AuroraPortfolioV3.build_multiple (overlap <= 2)
+- Calcola bias_analysis e regime_report come l'engine
+- Schema di output unificato con vinci_vita_engine.py
 """
 import json
 import os
 import sys
-import random
 import argparse
 import urllib.request
 import urllib.parse
@@ -47,11 +45,23 @@ try:
 except ImportError:
     BANKROLL_OK = False
 
+try:
+    from vinci_vita_bias_test import quick_bias_check
+    BIAS_OK = True
+except ImportError:
+    BIAS_OK = False
+
+try:
+    from vinci_vita_regime import RegimeDetector
+    REGIME_OK = True
+except ImportError:
+    REGIME_OK = False
+
 
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 DEFAULT_N = 2
-DATABASE_VERSION = "5.0"
+DATABASE_VERSION = "5.1"
 
 
 def load_history():
@@ -76,14 +86,12 @@ def send_telegram_message(text, parse_mode="HTML"):
     if not bot_token or not chat_id:
         print("[!] Token/chat_id mancanti.")
         return False
-
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     if len(text) > 4000:
         text = text[:3997] + "..."
     try:
         data = urllib.parse.urlencode({
-            "chat_id": chat_id,
-            "text": text,
+            "chat_id": chat_id, "text": text,
             "parse_mode": parse_mode,
             "disable_web_page_preview": "true",
         }).encode("utf-8")
@@ -102,12 +110,10 @@ def _next_draw_info(history):
     ld = history[-1] if history else {}
     lc = ld.get("concorso", "N/A")
     ldate = ld.get("data", "N/A")
-
     try:
         nc = int(lc) + 1
     except (ValueError, TypeError):
         nc = 1
-
     if ldate != "N/A":
         try:
             dt = datetime.strptime(ldate, "%d/%m/%Y")
@@ -116,23 +122,22 @@ def _next_draw_info(history):
             nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
     else:
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
-
     return lc, ldate, ld.get("numeri", []), nc, nd
 
 
-def _portfolio_coverage(sestinas):
-    if not sestinas:
+def _portfolio_coverage(sestinas_data):
+    if not sestinas_data:
         return 0.0
     all_nums = set()
-    for s in sestinas:
+    for s in sestinas_data:
         all_nums.update(s["numeri"])
-    unique_ratio = len(all_nums) / (6 * len(sestinas))
+    unique_ratio = len(all_nums) / (6 * len(sestinas_data))
     decades = set((n - 1) // 10 for n in all_nums)
     decade_ratio = len(decades) / 9.0
     return round(0.6 * unique_ratio + 0.4 * decade_ratio, 4)
 
 
-def build_database(sestinas_data, history):
+def build_database(sestinas_data, history, bias_result, regime_result):
     now = datetime.now()
     lc, ldate, ln, nc, nd = _next_draw_info(history)
 
@@ -160,8 +165,18 @@ def build_database(sestinas_data, history):
         "sestinas": sestinas_data,
         "portfolio_coverage": coverage,
         "bankroll_state": bankroll_state,
-        "bias_analysis": None,
-        "regime_report": None,
+        "bias_analysis": {
+            "health": bias_result.get("health"),
+            "chi2": bias_result.get("chi2"),
+            "is_uniform": bias_result.get("is_uniform"),
+            "has_hot_bias": bias_result.get("has_hot_bias"),
+            "has_cold_bias": bias_result.get("has_cold_bias"),
+            "has_autocorr": bias_result.get("has_autocorr"),
+            "hot_numbers": bias_result.get("hot_numbers", [])[:5],
+            "cold_numbers": bias_result.get("cold_numbers", [])[:5],
+            "profile_weights": bias_result.get("profile_weights"),
+        } if bias_result else None,
+        "regime_report": regime_result,
         "ev": {
             "ev_netto": round(ev["ev_netto"], 4),
             "ev_percentuale": round(ev["ev_percentuale"], 2),
@@ -172,19 +187,28 @@ def build_database(sestinas_data, history):
     }
 
 
-def build_telegram_report(sestinas_data, fp, next_concorso, next_date):
+def build_telegram_report(sestinas_data, fp, next_concorso, next_date,
+                          bias_result, regime_result):
     lines = []
     lines.append("🌅 <b>AURORA PLANNER</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
     lines.append(f"🎯 <b>PROSSIMO: Concorso N° {next_concorso}</b> · {next_date}")
     lines.append("")
-    if fp:
-        lines.append(f"📊 <b>Forma delle {fp['n_samples']} sestine reali:</b>")
-        lines.append(f"   • Somma media: {fp['sum_mean']}")
-        lines.append(f"   • Gap medio: {fp['gap_avg']}")
+
+    if bias_result:
+        lines.append(f"🧪 {bias_result.get('health', 'N/A')}")
         lines.append("")
-    lines.append(f"🎲 <b>{len(sestinas_data)} SESTINE DA GIOCARE</b>")
+    if regime_result:
+        lines.append(f"🔬 {regime_result.get('health', 'N/A')}")
+        lines.append("")
+
+    if fp:
+        lines.append(f"📊 <b>Forma ({fp['n_samples']} sestine reali):</b>")
+        lines.append(f"   Somma μ={fp['sum_mean']} · gap μ={fp['gap_avg']}")
+        lines.append("")
+
+    lines.append(f"🎲 <b>{len(sestinas_data)} SESTINE</b>")
     lines.append("")
     for s in sestinas_data:
         ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
@@ -217,6 +241,27 @@ def main():
         print("[!] vinci_vita_portfolio_v3 non disponibile.")
         sys.exit(1)
 
+    # Bias
+    bias_result = None
+    if BIAS_OK:
+        print("\n[*] Analisi bias...")
+        bias_result = quick_bias_check(history, verbose=True)
+        print(f"[*] {bias_result['health']}")
+
+    # Regime
+    regime_result = None
+    if REGIME_OK and len(history) >= 20:
+        try:
+            rd = RegimeDetector(
+                history,
+                recent_window=min(30, max(5, len(history) // 3)),
+            )
+            health = rd.overall_health()
+            print(f"[*] Regime: {health}")
+            regime_result = {"health": health, "n": len(history)}
+        except Exception as e:
+            print(f"[!] Regime errore: {e}")
+
     fp = extract_fingerprints(history)
     fp_eng = None
     if FP_ADV:
@@ -228,16 +273,16 @@ def main():
     pool = list(range(1, 91))
     p3 = AuroraPortfolioV3(history)
 
-    sestinas_data = []
-    crowd_model = CrowdModel() if CROWD_OK else None
+    print(f"\n[*] Genero {args.n} sestine con overlap controllato...")
+    raw = p3.build_multiple(pool, args.n, fp_engine=fp_eng, verbose=True)
 
-    for i in range(args.n):
-        # Seed diverso per ogni sestina
-        result = p3.build_single(pool, fp_engine=fp_eng, verbose=False,
-                                 seed=42 + i)
-        if not result:
-            continue
-        item = result[0]
+    if not raw:
+        print("[!] Nessuna sestina generata.")
+        sys.exit(1)
+
+    crowd_model = CrowdModel() if CROWD_OK else None
+    sestinas_data = []
+    for i, item in enumerate(raw, 1):
         s = item["numeri"]
         ac_score = None
         exp_share = None
@@ -248,7 +293,7 @@ def main():
             except Exception:
                 pass
         sestinas_data.append({
-            "id": i + 1,
+            "id": i,
             "profilo": item["profilo"],
             "numeri": s,
             "somma": sum(s),
@@ -257,27 +302,24 @@ def main():
             "expected_share_eur": exp_share,
         })
 
-    if not sestinas_data:
-        print("[!] Nessuna sestina generata.")
-        sys.exit(1)
-
     print()
     for s in sestinas_data:
         print(f"  {s['id']}. {s['numeri']} (somma {s['somma']})")
 
-    # Salva planner (legacy, mantenuto per compat)
+    # Legacy planner file
+    _, _, _, nc, nd = _next_draw_info(history)
     save_json("vinci_planner.json", {
-        "next_concorso": _next_draw_info(history)[3],
+        "next_concorso": nc,
         "fingerprint": fp,
         "sestinas": [s["numeri"] for s in sestinas_data],
     })
 
-    db = build_database(sestinas_data, history)
+    db = build_database(sestinas_data, history, bias_result, regime_result)
     save_json(DATABASE_FILE, db)
 
     print("\n[*] Invio Telegram...")
-    _, _, _, nc, nd = _next_draw_info(history)
-    report = build_telegram_report(sestinas_data, fp, nc, nd)
+    report = build_telegram_report(sestinas_data, fp, nc, nd,
+                                   bias_result, regime_result)
     send_telegram_message(report)
     print("\n" + "=" * 60)
 
