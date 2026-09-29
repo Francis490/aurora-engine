@@ -1,15 +1,16 @@
 name: Aurora Planner
 
 on:
-  schedule:
-    # 20:30 UTC+2 (dopo il sync delle 19:30) — eseguito dopo l'estrazione
-    - cron: '30 18 * * *'
+  # Cron DISATTIVATO per evitare race condition con vinci_sync.yml.
+  # Il planner è utilizzabile solo in modalità manuale (workflow_dispatch).
+  # Per riattivarlo, decommentare e spostare almeno 30 min dal sync.
+  # - cron: '00 18 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# STESSO GROUP del workflow vinci_sync.yml → serializzazione
+# STESSO concurrency group di vinci_sync.yml → serializzazione
 concurrency:
   group: aurora-sync-${{ github.ref }}
   cancel-in-progress: false
