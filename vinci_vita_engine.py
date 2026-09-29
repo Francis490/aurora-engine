@@ -1,10 +1,11 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v5.1 — Orchestratore con schema database unificato.
+AURORA ENGINE v5.2 — Orchestratore con build_multiple (N sestine, overlap <= 2).
 
 FIX (2026-09-29):
-- DATABASE_VERSION allineato a "5.1" (coerente con vinci_vita_planner)
-- resto invariato rispetto a v5.0
+- Usa AuroraPortfolioV3.build_multiple: N sestine con overlap controllato
+- N_SESTINE_DEFAULT = 2 (configurabile via parametro run_engine)
+- Rispetta budget_mode SKIP (n = 0)
 """
 import json
 import os
@@ -57,7 +58,8 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
-DATABASE_VERSION = "5.1"
+DATABASE_VERSION = "5.2"
+N_SESTINE_DEFAULT = 2
 
 
 def load_history():
@@ -111,20 +113,22 @@ def _portfolio_coverage(sestinas):
     return round(0.6 * unique_ratio + 0.4 * decade_ratio, 4)
 
 
-def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
+def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
     print("=" * 70)
-    print(f"AURORA ENGINE v{DATABASE_VERSION} — UNIFIED SCHEMA")
+    print(f"AURORA ENGINE v{DATABASE_VERSION} — MULTI-SESTINA")
     print("=" * 70)
 
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
+    # --- Bias ---
     bias_result = None
     if BIAS_OK:
         print(f"\n[*] Analisi bias...")
         bias_result = quick_bias_check(history, verbose=True)
         print(f"[*] {bias_result['health']}")
 
+    # --- Regime ---
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -136,10 +140,18 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
+    # --- Math / Budget ---
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
+    print(f"[*] Budget mode: {budget['mode']} ({budget['n_sestine']} sestine)")
 
+    # SKIP mode → nessuna sestina
+    if budget["mode"] == "SKIP":
+        print("[*] SKIP mode attivo. Nessuna sestina generata.")
+        n_sestine = 0
+
+    # --- Fingerprint ---
     pool = list(range(1, 91))
     fp = extract_fingerprints(history)
     print(f"[*] Fingerprint: {fp['n_draws']} estrazioni")
@@ -155,14 +167,16 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    print(f"\n[*] Costruzione sestina...")
-    p3 = AuroraPortfolioV3(history)
-    portfolio_raw = p3.build_single(pool, fp_engine=fp_eng, verbose=True)
+    # --- Portfolio ---
+    if n_sestine > 0:
+        print(f"\n[*] Costruzione {n_sestine} sestine con overlap <= 2...")
+        p3 = AuroraPortfolioV3(history)
+        portfolio_raw = p3.build_multiple(pool, n_sestine,
+                                          fp_engine=fp_eng, verbose=True)
+    else:
+        portfolio_raw = []
 
-    if not portfolio_raw:
-        print("[!] Portfolio vuoto.")
-        return None
-
+    # --- Crowd ---
     crowd_model = CrowdModel() if CROWD_OK else None
 
     sdata = []
@@ -188,6 +202,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE):
         })
         print(f"  {i}. [{item['profilo']}] {s} | somma {ssum}")
 
+    # --- Bankroll ---
     bankroll_state = None
     if BANKROLL_OK:
         try:
@@ -272,7 +287,8 @@ def format_report(payload):
         lines.append(f"📊 ULTIMA (N° {ld['concorso']}): {ns}")
         lines.append("")
     if payload["sestinas"]:
-        lines.append(f"🎲 SESTINA (€{payload['costo_totale']:.2f})")
+        n = len(payload["sestinas"])
+        lines.append(f"🎲 {n} SESTINE (€{payload['costo_totale']:.2f})")
         for s in payload["sestinas"]:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
