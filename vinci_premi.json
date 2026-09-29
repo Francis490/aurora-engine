@@ -1,0 +1,20 @@
+{
+  "note": "Quote medie attese ufficiali Sisal per Super Win for Life (fonte: sisal.it, consultato 29/09/2026). Aggiornare periodicamente.",
+  "fonte": "https://www.sisal.it/super-win-for-life",
+  "medie": {
+    "5": 25000,
+    "4": 250,
+    "3": 25,
+    "2": 5.00
+  },
+  "rendita_massima_mensile": 20000,
+  "rendita_massima_anni": 20,
+  "premi_reali": [
+    {
+      "concorso": 117,
+      "categoria": 2,
+      "premio_eur": 5.0,
+      "note": "Dato reale da vinci_played.json"
+    }
+  ]
+}
