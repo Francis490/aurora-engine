@@ -194,7 +194,14 @@
           85
         ]
       ],
-      "note": "Aurora Engine v4.0 — 1 sestina"
+      "note": "Aurora Engine v4.0 — 1 sestina",
+      "esito": "1 punto (08)",
+      "punti_per_sestina": [
+        1
+      ],
+      "premio_reale": 0.0,
+      "esito_verificato": true,
+      "esito_verificato_il": "2026-09-29T01:07:55.992359"
     },
     {
       "concorso": 119,
