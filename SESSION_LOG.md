@@ -91,3 +91,29 @@
 - Scrivere `vinci_vita_telegram.py` (Fase 4)
 - Backfill concorsi 110→119 via `fetch_vinci_draw.py`
 - Fase 5 (workflow + PWA)
+
+### Stato attuale
+- Versione progetto: **v0.1 (Fase 3 completata)**
+- Dataset: **concorso 119** (con buco 110→114)
+- Ultimo concorso registrato: **119** (29/09/2026)
+- Prossimo concorso: **120** (30/09/2026)
+- Bot Telegram: `@FrancisauroravinciBot` (configurato, non ancora operativo)
+- **Fase attuale**: Fase 3 (orchestratore) completata → Fase 4 in attesa
+- Priorità: **Venus Vortex prima**, poi ripresa Aurora Engine
+
+### Workflow GitHub attivi
+- (nessuno schedulato — Fase 5 non ancora implementata)
+
+### Lavoro in sospeso
+- ~~Fase 0: fetch_vinci_draw.py~~ ✅
+- ~~Fase 1: vinci_vita_math.py~~ ✅
+- ~~Fase 2: vinci_vita_generator.py~~ ✅
+- ~~Fase 3: vinci_vita_engine.py~~ ✅
+- **Fase 4: vinci_vita_telegram.py** ← prossimo
+- Fase 5: workflow + PWA
+- Backfill concorsi 110→119
+
+### Problemi noti
+- Nessun workflow schedulato → nessuna raccolta automatica
+- Buco dataset 110→119 (10 concorsi mancanti)
+- Fase 4 non implementata → bot Telegram configurato ma inattivo
