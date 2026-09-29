@@ -1,11 +1,11 @@
 """
 vinci_vita_crowd.py
-AURORA ENGINE v3.1 — Modello bayesiano dinamico del crowding.
+AURORA ENGINE v3.2 — Modello crowding + share conservativa.
 
-FIX (2026-09-29):
-- expected_share riformulato: stima quanti ALTRI vincitori in media (Poisson)
-  e calcola E[1/(1+N)] con N ~ Poisson(k). Prima il clamp a 1 rendeva il
-  campo sempre uguale al jackpot totale.
+FIX (2026-09-29 v2):
+- N_PLAYERS aumentato a 100M (stima conservativa, non più ottimistica)
+- Commento esplicito che expected_share è un valore speculativo
+- Il valore resta nel DB ma è stato rimosso dal Telegram
 
 Uso:
     from vinci_vita_crowd import CrowdModel
@@ -18,16 +18,19 @@ from typing import List, Dict, Optional
 
 
 BIRTHDAY_WEIGHTS = {n: (1.0 if 1 <= n <= 31 else 0.5) for n in range(1, 91)}
-BIRTHDAY_BASELINE = 0.6722  # media attesa per sestina uniforme da 90
+BIRTHDAY_BASELINE = 0.6722
 
 SUPERSTITION_WEIGHTS = {
     3: 1.4, 7: 1.5, 13: 1.3, 17: 1.2,
     22: 1.2, 33: 1.1, 77: 1.1,
 }
 
-# Stima giocatori attivi per estrazione (ordine di grandezza)
-N_PLAYERS = 50_000_000
-# Probabilità che una specifica sestina di 6 numeri su 90 sia giocata da 1 giocatore
+# Stima CONSERVATIVA dei giocatori attivi per estrazione.
+# Nota: nessuno conosce il numero reale. 100M è un upper bound plausibile
+# per una lotteria nazionale quotidiana. Il valore di expected_share
+# scala linearmente con questo numero, quindi va trattato come ordine di
+# grandezza, non come valore preciso.
+N_PLAYERS = 100_000_000
 BASE_PROB = 1 / 622_614_630
 
 
@@ -107,13 +110,12 @@ class CrowdModel:
     def expected_share(self, sestina: List[int],
                        total_jackpot_value: float = 2_729_878) -> float:
         """
-        Stima il valore pro capite atteso della rendita SE vinci.
+        Stima SPECULATIVA della quota pro capite se vinci 6 punti.
 
-        Modello: il numero di ALTRI vincitori segue approssimativamente
-        una Poisson con media k = N_PLAYERS * BASE_PROB * crowd.
-        Se tu vinci (condizione), gli altri N sono ~ Poisson(k).
-        La quota pro capite è jackpot / (1 + N).
-        E[1/(1+N)] con N ~ Poisson(k) = (1 - e^{-k}) / k.
+        ATTENZIONE: questo valore è un ORDINE DI GRANDEZZA, non un valore
+        preciso. Dipende da N_PLAYERS (stimato), dal modello Poisson
+        (approssimato) e dal crowding relativo (euristico).
+        Non usare per decisioni operative.
         """
         crowd = self.estimate_crowding(sestina)
         k = N_PLAYERS * BASE_PROB * crowd
@@ -137,9 +139,10 @@ def compare_sestinas(sestinas: List[List[int]],
                      date_str: Optional[str] = None,
                      jackpot: Optional[float] = None):
     print("=" * 70)
-    print("CONFRONTO CROWDING — AURORA v3.1")
+    print("CONFRONTO CROWDING — AURORA v3.2")
     print("=" * 70)
     print(f"Contesto: data={date_str}, jackpot={jackpot}")
+    print(f"N_PLAYERS stimato: {N_PLAYERS:,}")
     print()
     model = CrowdModel(date_str=date_str, jackpot=jackpot)
     rows = [(i, s, model.report(s)) for i, s in enumerate(sestinas, 1)]
@@ -148,7 +151,7 @@ def compare_sestinas(sestinas: List[List[int]],
         print(f"#{i}: {s}")
         print(f"    Crowd:    {r['crowd_index']:.3f}")
         print(f"    AC v3:    {r['anti_crowd_score']:.3f}")
-        print(f"    Share:    €{r['expected_share_eur']:,.0f} (se 6 punti)")
+        print(f"    Share:    €{r['expected_share_eur']:,.0f} (stima speculativa)")
         print()
     print("=" * 70)
     return rows
