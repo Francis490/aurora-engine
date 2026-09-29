@@ -1,10 +1,11 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v5.0 — Bot Telegram sender.
+AURORA ENGINE v5.1 — Bot Telegram sender.
 
 FIX (2026-09-29):
-- Integra BankrollManager: registra lo stake quando un nuovo concorso
-  viene aggiunto a vinci_played.json (no doppio conteggio)
+- Versione allineata a v5.1 (coerente con engine e planner)
+- Mostra expected_share_eur se presente
+- Conteggio sestine coerente con payload
 """
 import json
 import os
@@ -18,6 +19,7 @@ from datetime import datetime
 PLAYED_FILE = "vinci_played.json"
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
+DATABASE_VERSION = "5.1"
 
 
 def send_telegram_message(text, parse_mode="HTML"):
@@ -50,12 +52,15 @@ def send_telegram_message(text, parse_mode="HTML"):
 def send_telegram_report_smart(text):
     if len(text) <= TELEGRAM_SPLIT_THRESHOLD:
         return send_telegram_message(text)
+
     mid = len(text) // 2
     split_pos = text.rfind("\n\n", 0, mid + 500)
     if split_pos < 1000:
         split_pos = mid
+
     part1 = text[:split_pos].rstrip()
     part2 = text[split_pos:].lstrip()
+
     print(f"[*] Report splittato: parte 1 ({len(part1)}), parte 2 ({len(part2)})")
     ok1 = send_telegram_message(part1)
     ok2 = send_telegram_message(part2)
@@ -103,7 +108,6 @@ def record_play_in_file(payload):
     data = next_draw.get("data")
     costo = payload.get("costo_totale", 0.0)
 
-    # Se già presente, aggiorna e basta (no bankroll)
     for p in played["played"]:
         if p.get("concorso") == concorso:
             p["sestine"] = [s["numeri"] for s in sestinas]
@@ -113,20 +117,22 @@ def record_play_in_file(payload):
             save_played(played)
             return
 
-    # Nuovo concorso → registra
     played["played"].append({
         "concorso": concorso,
         "data": data,
         "giocata_il": datetime.now().strftime("%d/%m/%Y"),
         "costo_eur": costo,
         "sestine": [s["numeri"] for s in sestinas],
-        "note": f"Aurora Engine v5.0 — {len(sestinas)} sestina",
+        "note": f"Aurora Engine v{DATABASE_VERSION} — {len(sestinas)} sestine",
     })
     save_played(played)
     print(f"[+] Registrato concorso {concorso} in {PLAYED_FILE}")
 
-    # Bankroll update
     _update_bankroll_for_new_play(costo)
+
+
+def _plural_sestine(n):
+    return "sestina" if n == 1 else "sestine"
 
 
 def format_telegram_report(payload):
@@ -134,7 +140,7 @@ def format_telegram_report(payload):
         return "❌ Nessun payload."
 
     lines = []
-    lines.append("🌅 <b>AURORA ENGINE v5.0</b>")
+    lines.append(f"🌅 <b>AURORA ENGINE v{DATABASE_VERSION}</b>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
 
@@ -154,7 +160,8 @@ def format_telegram_report(payload):
         lines.append("")
 
     if payload.get("regime_report"):
-        lines.append(f"🔬 {payload['regime_report']['health']}")
+        h = payload["regime_report"]["health"]
+        lines.append(f"🔬 {h}")
         lines.append("")
 
     nd = payload.get("next_draw", {})
@@ -184,19 +191,23 @@ def format_telegram_report(payload):
     sestinas = payload.get("sestinas", [])
     if sestinas:
         costo = payload.get("costo_totale", 0)
-        lines.append(f"🎲 <b>SESTINE (€{costo:.2f})</b>")
+        n = len(sestinas)
+        lines.append(f"🎲 <b>{n} {_plural_sestine(n)} (€{costo:.2f})</b>")
         for s in sestinas:
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
             lines.append(f"   Somma {s['somma']}")
             if s.get("anti_crowd_score") is not None:
                 lines.append(f"   ACv3 {s['anti_crowd_score']:.2f}")
+            if s.get("expected_share_eur") is not None:
+                share = s["expected_share_eur"]
+                lines.append(f"   Share stimata: €{share:,.0f}")
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b>")
         lines.append("")
 
-    lines.append("🌅 <i>Aurora Engine v5.0 — Super Win for Life</i>")
+    lines.append(f"🌅 <i>Aurora Engine v{DATABASE_VERSION} — Super Win for Life</i>")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     return "\n".join(lines)
 
@@ -209,14 +220,14 @@ def main():
     args = parser.parse_args()
 
     if args.test:
-        msg = ("🌅 <b>Aurora Engine — TEST</b>\n"
+        msg = (f"🌅 <b>Aurora Engine v{DATABASE_VERSION} — TEST</b>\n"
                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                "✅ Bot configurato correttamente!")
         send_telegram_message(msg)
         return
 
     print("=" * 65)
-    print("AURORA ENGINE v5.0 — TELEGRAM DISPATCH")
+    print(f"AURORA ENGINE v{DATABASE_VERSION} — TELEGRAM DISPATCH")
     print("=" * 65)
 
     try:
