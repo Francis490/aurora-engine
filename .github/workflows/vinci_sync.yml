@@ -42,6 +42,10 @@ jobs:
         run: python fetch_vinci_draw.py
         continue-on-error: true
 
+      - name: Check post-estrazione (verifica giocate precedenti)
+        run: python vinci_vita_check.py
+        continue-on-error: true
+
       - name: Esecuzione Aurora Engine + Report Telegram
         run: python vinci_vita_telegram.py
 
@@ -50,7 +54,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          for file in vinci_history.json vinci_database.json vinci_played.json vinci_bankroll.json; do
+          for file in vinci_history.json vinci_database.json vinci_played.json \
+                      vinci_bankroll.json vinci_planner.json; do
             if [ -f "$file" ]; then
               git add "$file"
             fi
@@ -59,7 +64,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nessuna modifica da salvare."
           else
-            git commit -m "Aurora sync: $(date +'%Y-%m-%d') [skip ci]"
+            git commit -m "Aurora sync + check: $(date +'%Y-%m-%d') [skip ci]"
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
