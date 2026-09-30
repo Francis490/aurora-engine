@@ -1,6 +1,6 @@
 {
   "initial_bankroll": 100.0,
-  "bankroll": 98.0,
+  "bankroll": 94.0,
   "peak": 100.0,
   "stake_history": [
     {
@@ -8,15 +8,21 @@
       "stake": 2.0,
       "won": 0.0,
       "bankroll_after": 98.0
+    },
+    {
+      "ts": "2026-09-30T14:03:30.730981",
+      "stake": 4.0,
+      "won": 0.0,
+      "bankroll_after": 94.0
     }
   ],
   "win_history": [],
-  "total_wagered": 2.0,
+  "total_wagered": 6.0,
   "total_won": 0.0,
-  "n_plays": 1,
+  "n_plays": 2,
   "n_wins": 0,
   "stop_until": null,
   "created_at": "2026-09-29T00:15:02.938377",
-  "updated_at": "2026-09-29T00:15:02.938394",
+  "updated_at": "2026-09-30T14:03:30.731020",
   "roi_pct": -100.0
 }
