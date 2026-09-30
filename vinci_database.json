@@ -1,6 +1,6 @@
 {
   "version": "5.2",
-  "updated_at": "2026-09-30T14:03:30",
+  "updated_at": "2026-09-30T19:38:36",
   "rendita_mensile": 14070,
   "valore_attuale_rendita": 2781273.67,
   "budget_mode": {
@@ -49,13 +49,13 @@
   "portfolio_coverage": 0.7667,
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 98.0,
+    "bankroll": 94.0,
     "peak": 100.0,
-    "drawdown_pct": 2.0,
-    "total_wagered": 2.0,
+    "drawdown_pct": 6.0,
+    "total_wagered": 6.0,
     "total_won": 0.0,
-    "balance": -2.0,
-    "n_plays": 1,
+    "balance": -6.0,
+    "n_plays": 2,
     "n_wins": 0,
     "win_rate_pct": 0.0,
     "roi_pct": -100.0,
