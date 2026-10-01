@@ -1,20 +1,10 @@
 """
 vinci_vita_check.py
-AURORA ENGINE v5.2 — Check post-estrazione automatico.
+AURORA ENGINE v5.3 — Check post-estrazione automatico.
 
-Verifica le sestine giocate contro l'ultima estrazione disponibile.
-Aggiorna:
-- vinci_played.json (esito, premio_reale, punti_per_sestina)
-- vinci_bankroll.json (vincita, se > 0)
-- Invia Telegram con il risultato
-
-Idempotente: se un concorso è già verificato (esito_verificato=true),
-non lo ricontrolla.
-
-Uso:
-    python vinci_vita_check.py
-    python vinci_vita_check.py --quiet
-    python vinci_vita_check.py --force   # riverifica anche se già fatto
+FIX (2026-10-01):
+- Warning retroattivo: se giocata_il > data_estrazione, salta verifica
+  (evita falsi positivi da sestine generate DOPO l'estrazione).
 """
 import json
 import os
@@ -28,12 +18,9 @@ from datetime import datetime
 HISTORY_FILE = "vinci_history.json"
 PLAYED_FILE = "vinci_played.json"
 
-DATABASE_VERSION = "5.2"
+DATABASE_VERSION = "5.3"
 
 
-# ==========================================
-# UTILITY
-# ==========================================
 def load_json(fp, default):
     if os.path.exists(fp):
         try:
@@ -79,19 +66,16 @@ def send_telegram_message(text, parse_mode="HTML"):
 
 
 def _premio_for_punti(punti):
-    """Usa la tabella premi ufficiale da vinci_vita_math."""
     try:
         from vinci_vita_math import premio_stimato
         return float(premio_stimato(punti))
     except Exception as e:
         print(f"[!] Impossibile importare premio_stimato: {e}")
-        # Fallback tabella hardcoded
         fallback = {0: 0.0, 1: 0.0, 2: 5.0, 3: 25.0, 4: 250.0, 5: 25000.0}
         return fallback.get(punti, 0.0)
 
 
 def _format_punti(punti, numeri_centrati):
-    """Formatta l'esito in italiano."""
     if punti == 0:
         return "0 punti"
     if punti == 1:
@@ -99,14 +83,7 @@ def _format_punti(punti, numeri_centrati):
     return f"{punti} punti ({', '.join(str(n).zfill(2) for n in numeri_centrati)})"
 
 
-# ==========================================
-# CHECK
-# ==========================================
 def check_draw_against_played(concorso, numeri_estratti, sestine):
-    """
-    Verifica ogni sestina contro i numeri estratti.
-    Ritorna lista di dict {sestina, punti, numeri_centrati, premio_eur}.
-    """
     estratti_set = set(numeri_estratti)
     results = []
     for s in sestine:
@@ -173,7 +150,6 @@ def run_check(force=False, quiet=False):
         print("[*] Nessuna giocata registrata. Skip.")
         return None
 
-    # Prendi l'ultima estrazione
     last_draw = history[-1]
     concorso = last_draw.get("concorso")
     numeri_estratti = last_draw.get("numeri", [])
@@ -186,7 +162,6 @@ def run_check(force=False, quiet=False):
     print(f"[*] Ultima estrazione: Concorso {concorso} · {data_str}")
     print(f"[*] Numeri: {numeri_estratti}")
 
-    # Trova la giocata per questo concorso
     played_entry = None
     for p in played["played"]:
         if p.get("concorso") == concorso:
@@ -201,6 +176,19 @@ def run_check(force=False, quiet=False):
         print(f"[*] Concorso {concorso} già verificato. Skip.")
         return None
 
+    # === FIX (2026-10-01): warning retroattivo anti-falso-positivo ===
+    giocata_il = played_entry.get("giocata_il", "")
+    try:
+        d_giocata = datetime.strptime(giocata_il, "%d/%m/%Y")
+        d_estrazione = datetime.strptime(data_str, "%d/%m/%Y")
+        if d_giocata > d_estrazione:
+            print(f"[!!!] ATTENZIONE: giocata registrata il {giocata_il} "
+                  f"MA estrazione del {data_str}.")
+            print(f"[!!!] Falso positivo (sestina generata dopo l'estrazione). Salto.")
+            return None
+    except (ValueError, TypeError):
+        pass
+
     sestine = played_entry.get("sestine", [])
     if not sestine:
         print(f"[*] Concorso {concorso} senza sestine. Skip.")
@@ -208,7 +196,6 @@ def run_check(force=False, quiet=False):
 
     print(f"[*] Verifico {len(sestine)} sestine...")
 
-    # Calcola esiti
     results = check_draw_against_played(concorso, numeri_estratti, sestine)
     totale_premio = sum(r["premio_eur"] for r in results)
     costo_totale = played_entry.get("costo_eur", len(sestine) * 2.0)
@@ -222,7 +209,6 @@ def run_check(force=False, quiet=False):
     print(f"[*] Costo:         €{costo_totale:.2f}")
     print(f"[*] Netto:         €{totale_premio - costo_totale:+.2f}")
 
-    # Aggiorna played
     played_entry["esito"] = _format_punti(
         max(r["punti"] for r in results),
         results[0]["numeri_centrati"] if results else []
@@ -233,7 +219,6 @@ def run_check(force=False, quiet=False):
     played_entry["esito_verificato_il"] = datetime.now().isoformat()
     save_json(PLAYED_FILE, played)
 
-    # Aggiorna bankroll se c'è vincita
     if totale_premio > 0:
         try:
             from vinci_vita_bankroll import BankrollManager
@@ -245,7 +230,6 @@ def run_check(force=False, quiet=False):
     else:
         print("[*] Nessuna vincita da accreditare al bankroll.")
 
-    # Telegram
     if not quiet:
         report = _build_telegram_report(
             concorso, data_str, numeri_estratti,
@@ -266,10 +250,8 @@ def run_check(force=False, quiet=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--quiet", action="store_true",
-                        help="Non inviare Telegram")
-    parser.add_argument("--force", action="store_true",
-                        help="Riverifica anche se già verificato")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
     run_check(force=args.force, quiet=args.quiet)
