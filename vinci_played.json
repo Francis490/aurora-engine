@@ -15,7 +15,7 @@
       "giocata_il": "21/09/2026",
       "costo_eur": 2.0,
       "sestine": [[11, 16, 48, 59, 67, 68]],
-      "note": "Concorso 111 — 1 sestina (Aurora v2, AC 6.20)"
+      "note": "Concorso 111 — 1 sestina (Aurora v2)"
     },
     {
       "concorso": 112,
@@ -64,8 +64,11 @@
       "costo_eur": 2.0,
       "sestine": [[1, 31, 36, 64, 78, 86]],
       "note": "Aurora Engine v4.0 — 1 sestina",
+      "esito": "2 punti",
+      "punti_per_sestina": [2],
       "premio_reale": 5.0,
-      "esito": "2 punti (numeri 1 e 86)"
+      "esito_verificato": true,
+      "esito_verificato_il": "2026-09-28T01:00:00.000000"
     },
     {
       "concorso": 118,
@@ -74,7 +77,7 @@
       "costo_eur": 2.0,
       "sestine": [[8, 17, 42, 63, 71, 85]],
       "note": "Aurora Engine v4.0 — 1 sestina",
-      "esito": "1 punto (08)",
+      "esito": "1 punto",
       "punti_per_sestina": [1],
       "premio_reale": 0.0,
       "esito_verificato": true,
@@ -96,24 +99,23 @@
     {
       "concorso": 120,
       "data": "30/09/2026",
-      "giocata_il": "30/09/2026",
-      "costo_eur": 4.0,
-      "sestine": [[19, 26, 42, 49, 71, 88], [23, 26, 42, 56, 79, 82]],
-      "note": "Aurora Engine v5.2 — 2 sestine — FALSO POSITIVO: sestine generate dopo l'estrazione, mai giocate realmente",
-      "esito": "retroattivo — non giocato",
-      "punti_per_sestina": [0, 0],
+      "giocata_il": "01/10/2026",
+      "costo_eur": 0.0,
+      "sestine": [],
+      "note": "FALSO POSITIVO — sestine generate dopo l'estrazione, mai giocate. Entry svuotata.",
+      "esito": "non giocato",
       "premio_reale": 0.0,
       "esito_verificato": true,
-      "esito_verificato_il": "2026-10-01T01:49:14.528593",
+      "esito_verificato_il": "2026-10-01T02:00:00.000000",
       "falso_positivo": true
     },
     {
       "concorso": 121,
       "data": "01/10/2026",
       "giocata_il": "01/10/2026",
-      "costo_eur": 4.0,
-      "sestine": [[19, 26, 42, 49, 71, 88], [23, 26, 42, 56, 79, 82]],
-      "note": "Aurora Engine v5.2 — 2 sestine — giocate realmente il 01/10"
+      "costo_eur": 2.0,
+      "sestine": [[19, 26, 42, 49, 71, 88]],
+      "note": "Aurora Engine v5.5 — 1 sestina (semplificato)"
     }
   ]
 }
