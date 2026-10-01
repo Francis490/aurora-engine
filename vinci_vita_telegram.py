@@ -1,11 +1,9 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v5.2 — Bot Telegram sender.
+AURORA ENGINE v5.4 — Bot Telegram sender.
 
-FIX (2026-09-29 v2):
-- Versione allineata a 5.2
-- Rimossa "Share stimata" dal report (resta nel DB, non è affidabile)
-- Budget message ora coerente col numero reale di sestine generate
+FIX (2026-10-01):
+- RIMOSSO completamente anti-crowd (non più calcolato né mostrato).
 """
 import json
 import os
@@ -19,7 +17,7 @@ from datetime import datetime
 PLAYED_FILE = "vinci_played.json"
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
-DATABASE_VERSION = "5.2"
+DATABASE_VERSION = "5.4"
 
 
 def send_telegram_message(text, parse_mode="HTML"):
@@ -87,7 +85,6 @@ def save_played(data):
 
 
 def _update_bankroll_for_new_play(costo):
-    """Registra lo stake nel bankroll SOLO quando il concorso è nuovo."""
     try:
         from vinci_vita_bankroll import BankrollManager
         bm = BankrollManager()
@@ -176,7 +173,6 @@ def format_telegram_report(payload):
         lines.append(f"   <code>{ns}</code>")
         lines.append("")
 
-    # Budget: coerente col numero reale di sestine generate
     sestinas = payload.get("sestinas", [])
     n_real = len(sestinas)
     costo_real = payload.get("costo_totale", n_real * 2.0)
@@ -202,8 +198,6 @@ def format_telegram_report(payload):
             ns = " · ".join(str(n).zfill(2) for n in s["numeri"])
             lines.append(f"   <code>[{ns}]</code>")
             lines.append(f"   Somma {s['somma']}")
-            if s.get("anti_crowd_score") is not None:
-                lines.append(f"   ACv3 {s['anti_crowd_score']:.2f}")
         lines.append("")
     else:
         lines.append("🚫 <b>SKIP MODE</b>")
