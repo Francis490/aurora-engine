@@ -1,11 +1,10 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v5.3 — Orchestratore con build_multiple (N sestine, overlap <= 2).
+AURORA ENGINE v5.4 — Orchestratore con build_multiple (N sestine, overlap <= 2).
 
 FIX (2026-10-01):
 - Passa seed = 1000 + next_concorso a build_multiple.
-  Stesso concorso → stessa sestina (riproducibile).
-  Concorso diverso → sestina diversa (varietà garantita).
+- RIMOSSO completamente anti-crowd (import, calcolo, campi output).
 """
 import json
 import os
@@ -43,12 +42,6 @@ except ImportError:
     REGIME = False
 
 try:
-    from vinci_vita_crowd import CrowdModel
-    CROWD_OK = True
-except ImportError:
-    CROWD_OK = False
-
-try:
     from vinci_vita_bankroll import BankrollManager
     BANKROLL_OK = True
 except ImportError:
@@ -58,7 +51,7 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
-DATABASE_VERSION = "5.3"
+DATABASE_VERSION = "5.4"
 N_SESTINE_DEFAULT = 2
 
 
@@ -162,7 +155,7 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    # === FIX (2026-10-01): seed derivato dal concorso target ===
+    # Seed derivato dal concorso target
     lc_for_seed, _, _, nc_for_seed, _ = _next_draw_info(history)
     try:
         seed_for_portfolio = 1000 + int(nc_for_seed)
@@ -180,28 +173,17 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
     else:
         portfolio_raw = []
 
-    crowd_model = CrowdModel() if CROWD_OK else None
-
+    # Costruzione sdata SENZA anti-crowd
     sdata = []
     for i, item in enumerate(portfolio_raw, 1):
         s = item["numeri"]
         ssum = sum(s)
-        ac_score = None
-        exp_share = None
-        if crowd_model:
-            try:
-                ac_score = crowd_model.anti_crowd_score_v3(s)
-                exp_share = crowd_model.expected_share(s)
-            except Exception:
-                pass
         sdata.append({
             "id": i,
             "profilo": item["profilo"],
             "numeri": s,
             "somma": ssum,
             "score_profilo": item["score_profilo"],
-            "anti_crowd_score": ac_score,
-            "expected_share_eur": exp_share,
         })
         print(f"  {i}. [{item['profilo']}] {s} | somma {ssum}")
 
