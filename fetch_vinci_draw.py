@@ -2,11 +2,15 @@
 fetch_vinci_draw.py
 AURORA ENGINE — Raccolta estrazioni Super Win for Life da AGIMEG.
 
-VERSIONE DIAGNOSTICA (2026-09-30):
-- Log dettagliato di ogni passo
-- Salva HTML raw in `debug_agimeg/` su fallimento
-- Regex URL allargata + fallback per data
-- Stampa gli URL candidati trovati nella pagina di ricerca
+APPROCCIO (2026-10-01):
+- La ricerca WordPress di AGIMEG NON restituisce articoli specifici.
+- Approccio corretto: naviga la CATEGORIA /lotterie/win-for-life/,
+  estrai tutti gli URL di articoli, filtra per data.
+- Supporto paginazione (/page/2/, /page/3/, ...) per backfill.
+
+Uso:
+    python fetch_vinci_draw.py              # recupera oggi
+    python fetch_vinci_draw.py --backfill 30
 """
 import json
 import os
@@ -33,6 +37,7 @@ HEADERS = {
 }
 
 BASE_URL = "https://www.agimeg.it"
+CATEGORY_URL = f"{BASE_URL}/lotterie/win-for-life/"
 
 MESI_IT = {
     "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
@@ -92,43 +97,29 @@ def fetch_url(url, timeout=20):
         return None
 
 
-def build_search_url(data):
-    giorno = data.day
-    mese = MESI_IT_INV[data.month]
-    anno = data.year
-    url = f"{BASE_URL}/?s=Super+Win+for+Life+{giorno}+{mese}+{anno}"
-    return url
-
-
-def find_article_url_for_date(data):
-    """Trova URL articolo AGIMEG. Logga TUTTI i candidati trovati."""
-    search_url = build_search_url(data)
-    print(f"  [search] {search_url}")
-    html = fetch_url(search_url)
-    if not html:
-        return None
-
-    date_tag = data.strftime("%Y%m%d")
-    save_debug(f"search_{date_tag}.html", html)
-
+def extract_article_urls_from_category(html):
+    """Estrae URL di articoli dalla pagina categoria AGIMEG."""
+    # Pattern: href a /lotterie/win-for-life/<slug>/ (con almeno uno slug dopo)
     pattern = re.compile(
-        r'href="(https?://(?:www\.)?agimeg\.it/[^"]*super-win-for-life[^"]*)"',
+        r'href="(https?://(?:www\.)?agimeg\.it/lotterie/win-for-life/[a-z0-9\-]+/?)"',
         re.IGNORECASE
     )
-    all_urls = pattern.findall(html)
-    print(f"  [search] {len(all_urls)} URL 'super-win-for-life' trovati")
+    urls = pattern.findall(html)
+    # Escludi la categoria stessa (senza slug)
+    urls = [u for u in urls if u.rstrip("/") != CATEGORY_URL.rstrip("/")]
+    # Deduplica mantenendo ordine
+    seen = set()
+    unique = []
+    for u in urls:
+        if u not in seen:
+            seen.add(u)
+            unique.append(u)
+    return unique
 
-    if not all_urls:
-        pattern2 = re.compile(
-            r'href="(https?://(?:www\.)?agimeg\.it/[^"]*(?:win-for-life|winforlife)[^"]*)"',
-            re.IGNORECASE
-        )
-        all_urls = pattern2.findall(html)
-        print(f"  [search] fallback: {len(all_urls)} URL con 'win...life'")
 
-    for i, u in enumerate(all_urls[:10], 1):
-        print(f"    [{i}] {u}")
-
+def url_matches_date(url, data):
+    """Verifica se l'URL dell'articolo contiene la data target."""
+    u_lower = url.lower()
     giorno = data.day
     mese_num = data.month
     mese_nome = MESI_IT_INV[mese_num]
@@ -136,7 +127,7 @@ def find_article_url_for_date(data):
     mese_abbr_list = [k for k, v in MESI_ABBR.items() if v == mese_num]
     mese_abbr = mese_abbr_list[0] if mese_abbr_list else ""
 
-    patterns_data = [
+    patterns = [
         f"{giorno}-{mese_nome}-{anno}",
         f"{giorno:02d}-{mese_nome}-{anno}",
         f"{giorno}-{mese_abbr}-{anno}",
@@ -146,19 +137,48 @@ def find_article_url_for_date(data):
         f"{anno}/{mese_num:02d}/{giorno:02d}",
         f"{anno}-{mese_num:02d}-{giorno:02d}",
     ]
+    for p in patterns:
+        if p in u_lower:
+            return True, p
+    return False, None
 
-    print(f"  [search] cerco uno di questi pattern nella URL:")
-    for p in patterns_data:
-        print(f"    • {p}")
 
-    for u in all_urls:
-        u_lower = u.lower()
-        for p in patterns_data:
-            if p.lower() in u_lower:
-                print(f"  [search] ✓ match: {u}")
+def find_article_url_for_date(data, max_pages=3):
+    """
+    Naviga la categoria e cerca articolo con data target.
+    Esplora fino a max_pages pagine.
+    """
+    for page in range(1, max_pages + 1):
+        if page == 1:
+            page_url = CATEGORY_URL
+        else:
+            page_url = f"{CATEGORY_URL}page/{page}/"
+
+        print(f"  [category] pagina {page}: {page_url}")
+        html = fetch_url(page_url)
+        if not html:
+            continue
+
+        date_tag = data.strftime("%Y%m%d")
+        save_debug(f"category_{date_tag}_p{page}.html", html)
+
+        urls = extract_article_urls_from_category(html)
+        print(f"  [category] {len(urls)} URL articoli trovati")
+
+        if page == 1:
+            for i, u in enumerate(urls[:15], 1):
+                print(f"    [{i}] {u}")
+
+        for u in urls:
+            match, pattern_used = url_matches_date(u, data)
+            if match:
+                print(f"  [category] ✓ match (pattern '{pattern_used}'): {u}")
                 return u
 
-    print(f"  [search] ✗ nessun match per data {data.strftime('%d/%m/%Y')}")
+        time.sleep(1)
+
+    print(f"  [category] ✗ nessun match per data {data.strftime('%d/%m/%Y')} "
+          f"in {max_pages} pagine")
     return None
 
 
@@ -175,7 +195,7 @@ def parse_article(html, verbose=True):
         result["concorso"] = int(m.group(1))
 
     m = re.search(
-        r"Super Win for Life\s+(\d{1,2})\s+"
+        r"(\d{1,2})\s+"
         r"(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|"
         r"settembre|ottobre|novembre|dicembre)\s+(\d{4})",
         text, re.IGNORECASE
@@ -285,7 +305,7 @@ def sort_chronological(history):
 
 
 def main():
-    print("=== AURORA ENGINE — FETCH VINCI DRAW (DIAGNOSTIC) ===\n")
+    print("=== AURORA ENGINE — FETCH VINCI DRAW (v3) ===\n")
 
     backfill_days = 0
     if len(sys.argv) > 2 and sys.argv[1] == "--backfill":
