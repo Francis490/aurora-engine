@@ -1,9 +1,11 @@
 """
 vinci_vita_telegram.py
-AURORA ENGINE v5.4 — Bot Telegram sender.
+AURORA ENGINE v5.5 — Bot Telegram sender.
 
 FIX (2026-10-01):
-- RIMOSSO completamente anti-crowd (non più calcolato né mostrato).
+- Versione allineata a 5.5
+- Rimosso ogni riferimento ad anti-crowd (ACv3)
+- Report semplificato: 1 sestina
 """
 import json
 import os
@@ -17,7 +19,7 @@ from datetime import datetime
 PLAYED_FILE = "vinci_played.json"
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
-DATABASE_VERSION = "5.4"
+DATABASE_VERSION = "5.5"
 
 
 def send_telegram_message(text, parse_mode="HTML"):
