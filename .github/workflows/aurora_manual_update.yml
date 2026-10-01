@@ -1,0 +1,78 @@
+name: Aurora Manual Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      concorso:
+        description: 'Numero concorso (es. 121)'
+        required: true
+        type: string
+      data:
+        description: 'Data GG/MM/AAAA (es. 01/10/2026)'
+        required: true
+        type: string
+      numeri:
+        description: 'Otto numeri separati da spazio (es. 3 15 22 33 44 55 66 77)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MPLBACKEND: Agg
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Aggiungi estrazione manuale
+        run: |
+          python manual_add_draw.py \
+            "${{ github.event.inputs.concorso }}" \
+            "${{ github.event.inputs.data }}" \
+            ${{ github.event.inputs.numeri }}
+
+      - name: Check post-estrazione
+        run: python vinci_vita_check.py
+        continue-on-error: true
+
+      - name: Esecuzione Engine + Telegram
+        run: python vinci_vita_telegram.py
+
+      - name: Salvataggio su GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          for file in vinci_history.json vinci_database.json \
+                      vinci_played.json vinci_bankroll.json; do
+            if [ -f "$file" ]; then
+              git add "$file"
+            fi
+          done
+
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica."
+          else
+            git commit -m "Manual update concorso ${{ github.event.inputs.concorso }} [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
