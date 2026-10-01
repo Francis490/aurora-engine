@@ -1,11 +1,11 @@
 """
 vinci_vita_engine.py
-AURORA ENGINE v5.2 — Orchestratore con build_multiple (N sestine, overlap <= 2).
+AURORA ENGINE v5.3 — Orchestratore con build_multiple (N sestine, overlap <= 2).
 
-FIX (2026-09-29):
-- Usa AuroraPortfolioV3.build_multiple: N sestine con overlap controllato
-- N_SESTINE_DEFAULT = 2 (configurabile via parametro run_engine)
-- Rispetta budget_mode SKIP (n = 0)
+FIX (2026-10-01):
+- Passa seed = 1000 + next_concorso a build_multiple.
+  Stesso concorso → stessa sestina (riproducibile).
+  Concorso diverso → sestina diversa (varietà garantita).
 """
 import json
 import os
@@ -58,7 +58,7 @@ except ImportError:
 HISTORY_FILE = "vinci_history.json"
 DATABASE_FILE = "vinci_database.json"
 
-DATABASE_VERSION = "5.2"
+DATABASE_VERSION = "5.3"
 N_SESTINE_DEFAULT = 2
 
 
@@ -121,14 +121,12 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
     history = load_history()
     print(f"[*] Storico: {len(history)} estrazioni")
 
-    # --- Bias ---
     bias_result = None
     if BIAS_OK:
         print(f"\n[*] Analisi bias...")
         bias_result = quick_bias_check(history, verbose=True)
         print(f"[*] {bias_result['health']}")
 
-    # --- Regime ---
     regime = None
     if REGIME and len(history) >= 20:
         try:
@@ -140,18 +138,15 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
         except Exception as e:
             print(f"[!] Regime errore: {e}")
 
-    # --- Math / Budget ---
     ev = calcola_ev(rendita)
     budget = soglie_budget(rendita)
     print(f"[*] EV: €{ev['ev_netto']:+.4f} ({ev['ev_percentuale']:+.2f}%)")
     print(f"[*] Budget mode: {budget['mode']} ({budget['n_sestine']} sestine)")
 
-    # SKIP mode → nessuna sestina
     if budget["mode"] == "SKIP":
         print("[*] SKIP mode attivo. Nessuna sestina generata.")
         n_sestine = 0
 
-    # --- Fingerprint ---
     pool = list(range(1, 91))
     fp = extract_fingerprints(history)
     print(f"[*] Fingerprint: {fp['n_draws']} estrazioni")
@@ -167,16 +162,24 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
         print("[!] Portfolio V3 non disponibile.")
         return None
 
-    # --- Portfolio ---
+    # === FIX (2026-10-01): seed derivato dal concorso target ===
+    lc_for_seed, _, _, nc_for_seed, _ = _next_draw_info(history)
+    try:
+        seed_for_portfolio = 1000 + int(nc_for_seed)
+    except (ValueError, TypeError):
+        seed_for_portfolio = 1000
+
     if n_sestine > 0:
         print(f"\n[*] Costruzione {n_sestine} sestine con overlap <= 2...")
+        print(f"[*] Seed portfolio: {seed_for_portfolio} (concorso {nc_for_seed})")
         p3 = AuroraPortfolioV3(history)
-        portfolio_raw = p3.build_multiple(pool, n_sestine,
-                                          fp_engine=fp_eng, verbose=True)
+        portfolio_raw = p3.build_multiple(
+            pool, n_sestine, fp_engine=fp_eng, verbose=True,
+            base_seed=seed_for_portfolio
+        )
     else:
         portfolio_raw = []
 
-    # --- Crowd ---
     crowd_model = CrowdModel() if CROWD_OK else None
 
     sdata = []
@@ -202,7 +205,6 @@ def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
         })
         print(f"  {i}. [{item['profilo']}] {s} | somma {ssum}")
 
-    # --- Bankroll ---
     bankroll_state = None
     if BANKROLL_OK:
         try:
