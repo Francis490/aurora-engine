@@ -1,10 +1,14 @@
 """
 vinci_vita_check.py
-AURORA ENGINE v5.3 — Check post-estrazione automatico.
+AURORA ENGINE v5.5 — Check post-estrazione automatico.
+
+Verifica le sestine giocate contro l'ultima estrazione disponibile.
+Aggiorna vinci_played.json e vinci_bankroll.json (se c'è vincita).
+Invia Telegram con il risultato.
 
 FIX (2026-10-01):
-- Warning retroattivo: se giocata_il > data_estrazione, salta verifica
-  (evita falsi positivi da sestine generate DOPO l'estrazione).
+- Warning retroattivo: se giocata_il > data_estrazione, salta (falso positivo).
+- Allineato a v5.5.
 """
 import json
 import os
@@ -18,7 +22,7 @@ from datetime import datetime
 HISTORY_FILE = "vinci_history.json"
 PLAYED_FILE = "vinci_played.json"
 
-DATABASE_VERSION = "5.3"
+DATABASE_VERSION = "5.5"
 
 
 def load_json(fp, default):
@@ -176,7 +180,7 @@ def run_check(force=False, quiet=False):
         print(f"[*] Concorso {concorso} già verificato. Skip.")
         return None
 
-    # === FIX (2026-10-01): warning retroattivo anti-falso-positivo ===
+    # Warning retroattivo anti-falso-positivo
     giocata_il = played_entry.get("giocata_il", "")
     try:
         d_giocata = datetime.strptime(giocata_il, "%d/%m/%Y")
@@ -184,7 +188,7 @@ def run_check(force=False, quiet=False):
         if d_giocata > d_estrazione:
             print(f"[!!!] ATTENZIONE: giocata registrata il {giocata_il} "
                   f"MA estrazione del {data_str}.")
-            print(f"[!!!] Falso positivo (sestina generata dopo l'estrazione). Salto.")
+            print(f"[!!!] Falso positivo. Salto verifica.")
             return None
     except (ValueError, TypeError):
         pass
@@ -228,7 +232,7 @@ def run_check(force=False, quiet=False):
         except Exception as e:
             print(f"[!] Errore bankroll: {e}")
     else:
-        print("[*] Nessuna vincita da accreditare al bankroll.")
+        print("[*] Nessuna vincita da accreditare.")
 
     if not quiet:
         report = _build_telegram_report(
