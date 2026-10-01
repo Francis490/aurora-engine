@@ -1,13 +1,14 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v4.3 — Portfolio con CLUSTER SCORE + overlap control.
+AURORA ENGINE v4.4 — Portfolio con CLUSTER SCORE + overlap control.
 
-FIX (2026-09-29):
-- build_single accetta existing_sestinas: impone overlap <= 2 tra sestine
-- Se non trova candidati con overlap <= 2, allenta a <= 3, poi <= 4
-- fp_engine davvero usato nel composite
+FIX (2026-10-01):
+- build_multiple NON ha più default fisso base_seed=42.
+- Se base_seed è None, usa seed derivato da n + timestamp (fallback).
+- Il chiamante (engine) DEVE passare seed = 1000 + next_concorso.
 """
 import random
+import time
 from collections import defaultdict
 from typing import List, Dict, Tuple, Optional
 
@@ -16,8 +17,8 @@ SUM_MIN = 240
 SUM_MAX = 310
 DEFAULT_SAMPLES = 100_000
 
-MAX_OVERLAP_TARGET = 2  # preferito
-MAX_OVERLAP_FALLBACK = [2, 3, 4, 6]  # escalation
+MAX_OVERLAP_TARGET = 2
+MAX_OVERLAP_FALLBACK = [2, 3, 4, 6]
 
 
 class AuroraPortfolioV3:
@@ -105,10 +106,6 @@ class AuroraPortfolioV3:
                      seed: int = 42,
                      existing_sestinas: Optional[List[List[int]]] = None
                      ) -> List[Dict]:
-        """
-        Genera UNA sestina ottimale.
-        Se existing_sestinas è fornito, impone overlap <= 2 (fallback a 3, 4).
-        """
         if len(pool) < 6:
             return []
 
@@ -138,7 +135,6 @@ class AuroraPortfolioV3:
         if not candidates:
             return []
 
-        # Valida fingerprint 12/12
         valid = []
         if fp_engine:
             try:
@@ -160,7 +156,6 @@ class AuroraPortfolioV3:
         if not valid:
             valid = candidates
 
-        # Filtro overlap con escalation progressiva
         filtered = None
         used_threshold = None
         if existing_sestinas:
@@ -180,7 +175,6 @@ class AuroraPortfolioV3:
         else:
             filtered = valid
 
-        # Composite scoring
         scored = []
         for combo in filtered:
             s_trend = self._score_trend(combo)
@@ -219,15 +213,26 @@ class AuroraPortfolioV3:
         }]
 
     # ==========================================
-    # BUILD MULTIPLE (nuovo, per il planner)
+    # BUILD MULTIPLE
     # ==========================================
     def build_multiple(self, pool: List[int], n: int,
                        fp_engine=None, verbose: bool = True,
-                       base_seed: int = 42) -> List[Dict]:
+                       base_seed: int = None) -> List[Dict]:
         """
         Genera N sestine con overlap controllato.
-        Ogni sestina vede le precedenti come 'existing'.
+
+        FIX (2026-10-01):
+        - `base_seed` NON ha più default fisso 42.
+        - Il chiamante DEVE passare seed = 1000 + next_concorso.
+        - Fallback: seed derivato da n + timestamp (per non rompere se
+          qualcuno dimentica di passarlo).
         """
+        if base_seed is None:
+            base_seed = (self.n * 1000) + int(time.time()) % 10000
+
+        if verbose:
+            print(f"[*] build_multiple: n={n}, base_seed={base_seed}")
+
         results = []
         for i in range(n):
             existing = [r["numeri"] for r in results]
