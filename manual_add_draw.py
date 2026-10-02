@@ -2,14 +2,15 @@
 manual_add_draw.py
 Aggiunge un'estrazione manuale a vinci_history.json.
 
-Uso:
-    python manual_add_draw.py <concorso> <data> <n1> <n2> ... <n8>
+Accetta numeri sia separati da spazio che da virgola.
 
-Es:
+Uso:
     python manual_add_draw.py 121 01/10/2026 3 15 22 33 44 55 66 77
+    python manual_add_draw.py 121 01/10/2026 "3,15,22,33,44,55,66,77"
 """
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -18,7 +19,7 @@ HISTORY_FILE = "vinci_history.json"
 
 
 def main():
-    if len(sys.argv) != 11:
+    if len(sys.argv) < 4:
         print("Uso: python manual_add_draw.py <concorso> <data> <n1..n8>")
         sys.exit(1)
 
@@ -30,14 +31,19 @@ def main():
 
     data = sys.argv[2]
 
+    # Unisce tutti gli argomenti rimanenti e splitta su spazi/virgole
+    rest = " ".join(sys.argv[3:])
+    tokens = re.split(r"[,\s]+", rest.strip())
+    tokens = [t for t in tokens if t]
+
     try:
-        numeri = [int(x) for x in sys.argv[3:11]]
+        numeri = [int(t) for t in tokens]
     except ValueError:
-        print("[!] Numeri non validi.")
+        print(f"[!] Numeri non validi: {tokens}")
         sys.exit(1)
 
     if len(numeri) != 8 or not all(1 <= n <= 90 for n in numeri):
-        print("[!] Servono 8 numeri tra 1 e 90.")
+        print(f"[!] Servono 8 numeri tra 1 e 90. Ricevuti: {numeri}")
         sys.exit(1)
 
     history = []
