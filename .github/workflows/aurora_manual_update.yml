@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       concorso:
-        description: 'Numero concorso (es. 121)'
+        description: 'Numero concorso (es. 122)'
         required: true
         type: string
       data:
-        description: 'Data GG/MM/AAAA (es. 01/10/2026)'
+        description: 'Data GG/MM/AAAA (es. 02/10/2026)'
         required: true
         type: string
       numeri:
-        description: 'Otto numeri separati da spazio (es. 3 15 22 33 44 55 66 77)'
+        description: 'Otto numeri (virgole o spazi, es. 7,13,18,23,26,36,55,57)'
         required: true
         type: string
 
@@ -45,10 +45,13 @@ jobs:
 
       - name: Aggiungi estrazione manuale
         run: |
+          NUMERI_RAW="${{ github.event.inputs.numeri }}"
+          NUMERI_SPAZI=$(echo "$NUMERI_RAW" | tr ',' ' ')
+          echo "Numeri normalizzati: $NUMERI_SPAZI"
           python manual_add_draw.py \
             "${{ github.event.inputs.concorso }}" \
             "${{ github.event.inputs.data }}" \
-            ${{ github.event.inputs.numeri }}
+            $NUMERI_SPAZI
 
       - name: Check post-estrazione
         run: python vinci_vita_check.py
