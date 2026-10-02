@@ -260,7 +260,14 @@
           88
         ]
       ],
-      "note": "Aurora Engine v5.5 — 1 sestina (semplificato)"
+      "note": "Aurora Engine v5.5 — 1 sestina (semplificato)",
+      "esito": "2 punti (49, 88)",
+      "punti_per_sestina": [
+        2
+      ],
+      "premio_reale": 5.0,
+      "esito_verificato": true,
+      "esito_verificato_il": "2026-10-02T21:28:01.898042"
     },
     {
       "concorso": 122,
