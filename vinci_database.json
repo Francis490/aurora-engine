@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-01T23:54:39",
-  "rendita_mensile": 14070,
-  "valore_attuale_rendita": 2781273.67,
+  "updated_at": "2026-10-02T20:57:51",
+  "rendita_mensile": 14180,
+  "valore_attuale_rendita": 2803017.81,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -30,13 +30,13 @@
   ],
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 90.0,
+    "bankroll": 88.0,
     "peak": 100.0,
-    "drawdown_pct": 10.0,
-    "total_wagered": 10.0,
+    "drawdown_pct": 12.0,
+    "total_wagered": 12.0,
     "total_won": 0.0,
-    "balance": -10.0,
-    "n_plays": 3,
+    "balance": -12.0,
+    "n_plays": 4,
     "n_wins": 0,
     "win_rate_pct": 0.0,
     "roi_pct": -100.0,
@@ -45,7 +45,7 @@
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 68.67,
+    "chi2": 70.99,
     "hot_numbers": [
       49,
       18
@@ -54,11 +54,11 @@
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 121
+    "n": 122
   },
   "ev": {
-    "ev_netto": -1.0123,
-    "ev_percentuale": -50.61
+    "ev_netto": -1.0114,
+    "ev_percentuale": -50.57
   },
   "last_draw": {
     "concorso": 121,
