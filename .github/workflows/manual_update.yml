@@ -1,51 +1,38 @@
-name: Manual Update
+name: Aurora Manual Update
 
 on:
   workflow_dispatch:
     inputs:
       concorso:
-        description: 'Numero concorso (es. 112)'
+        description: 'Numero concorso (es. 122)'
         required: true
         type: string
       data:
-        description: 'Data estrazione DD/MM/YYYY (es. 22/09/2026)'
+        description: 'Data GG/MM/AAAA (es. 02/10/2026)'
         required: true
         type: string
       numeri:
-        description: '8 numeri estratti separati da virgola (es. "23,42,47,60,69,71,87,88")'
+        description: 'Otto numeri (virgole o spazi)'
         required: true
-        type: string
-      sestine:
-        description: 'Sestine giocate (opzionale) - formato "a,b,c,d,e,f | g,h,i,j,k,l"'
-        required: false
-        default: ''
         type: string
 
 permissions:
   contents: write
 
-concurrency:
-  group: aurora-manual-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  manual-update:
+  update:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       MPLBACKEND: Agg
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      MANUAL_CONCORSO: ${{ github.event.inputs.concorso }}
-      MANUAL_DATA: ${{ github.event.inputs.data }}
-      MANUAL_NUMERI: ${{ github.event.inputs.numeri }}
-      MANUAL_SESTINE: ${{ github.event.inputs.sestine }}
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Python 3.10
+      - name: Setup Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.10'
@@ -56,10 +43,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Aggiornamento manuale
-        run: python aurora_manual_update.py
+      - name: Aggiungi estrazione manuale
+        run: |
+          python manual_add_draw.py \
+            "${{ github.event.inputs.concorso }}" \
+            "${{ github.event.inputs.data }}" \
+            "${{ github.event.inputs.numeri }}"
 
-      - name: Esecuzione engine + report Telegram
+      - name: Check post-estrazione
+        run: python vinci_vita_check.py
+        continue-on-error: true
+
+      - name: Esecuzione Engine + Telegram
         run: python vinci_vita_telegram.py
 
       - name: Salvataggio su GitHub
@@ -67,16 +62,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          for file in vinci_history.json vinci_played.json vinci_database.json vinci_bankroll.json; do
+          for file in vinci_history.json vinci_database.json \
+                      vinci_played.json vinci_bankroll.json; do
             if [ -f "$file" ]; then
               git add "$file"
             fi
           done
 
           if git diff --cached --quiet; then
-            echo "Nessuna modifica da salvare."
+            echo "Nessuna modifica."
           else
-            git commit -m "Manual update: concorso ${{ github.event.inputs.concorso }} [skip ci]"
+            git commit -m "Manual update concorso ${{ github.event.inputs.concorso }} [skip ci]"
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
