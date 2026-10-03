@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-03T22:52:27",
-  "rendita_mensile": 14180,
-  "valore_attuale_rendita": 2803017.81,
+  "updated_at": "2026-10-03T22:59:47",
+  "rendita_mensile": 14260,
+  "valore_attuale_rendita": 2818831.74,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -30,16 +30,16 @@
   ],
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 91.0,
+    "bankroll": 89.0,
     "peak": 100.0,
-    "drawdown_pct": 9.0,
-    "total_wagered": 14.0,
+    "drawdown_pct": 11.0,
+    "total_wagered": 16.0,
     "total_won": 5.0,
-    "balance": -9.0,
-    "n_plays": 5,
+    "balance": -11.0,
+    "n_plays": 6,
     "n_wins": 1,
-    "win_rate_pct": 20.0,
-    "roi_pct": -64.29,
+    "win_rate_pct": 16.67,
+    "roi_pct": -68.75,
     "is_stopped": false,
     "stop_until": null
   },
@@ -57,8 +57,8 @@
     "n": 123
   },
   "ev": {
-    "ev_netto": -1.0114,
-    "ev_percentuale": -50.57
+    "ev_netto": -1.0107,
+    "ev_percentuale": -50.53
   },
   "last_draw": {
     "concorso": 123,
