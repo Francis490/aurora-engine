@@ -1,20 +1,5 @@
 [
   {
-    "concorso": 122,
-    "data": "22/09/2026",
-    "numeri": [
-      7,
-      13,
-      18,
-      23,
-      26,
-      36,
-      55,
-      57
-    ],
-    "url": "manual-update"
-  },
-  {
     "concorso": 1,
     "data": "03/06/2026",
     "numeri": [
@@ -1828,5 +1813,20 @@
       36
     ],
     "url": "manual-update"
+  },
+  {
+    "concorso": 122,
+    "data": "02/10/2026",
+    "numeri": [
+      7,
+      13,
+      18,
+      23,
+      26,
+      36,
+      55,
+      57
+    ],
+    "url": "manual-input"
   }
 ]
