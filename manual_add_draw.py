@@ -1,12 +1,7 @@
 """
 manual_add_draw.py
 Aggiunge un'estrazione manuale a vinci_history.json.
-
-Accetta numeri sia separati da spazio che da virgola.
-
-Uso:
-    python manual_add_draw.py 121 01/10/2026 3 15 22 33 44 55 66 77
-    python manual_add_draw.py 121 01/10/2026 "3,15,22,33,44,55,66,77"
+Accetta numeri separati da virgola, spazio, o entrambi.
 """
 import json
 import os
@@ -19,41 +14,33 @@ HISTORY_FILE = "vinci_history.json"
 
 
 def main():
+    print(f"[debug] argc={len(sys.argv)}")
+    print(f"[debug] argv={sys.argv}")
+
     if len(sys.argv) < 4:
-        print("Uso: python manual_add_draw.py <concorso> <data> <n1..n8>")
+        print("[!] Uso: manual_add_draw.py <concorso> <data> <numeri>")
         sys.exit(1)
 
-    try:
-        concorso = int(sys.argv[1])
-    except ValueError:
-        print("[!] Concorso non valido.")
-        sys.exit(1)
-
+    concorso = int(sys.argv[1])
     data = sys.argv[2]
 
-    # Unisce tutti gli argomenti rimanenti e splitta su spazi/virgole
     rest = " ".join(sys.argv[3:])
+    print(f"[debug] rest='{rest}'")
+
     tokens = re.split(r"[,\s]+", rest.strip())
     tokens = [t for t in tokens if t]
+    print(f"[debug] tokens={tokens}")
 
-    try:
-        numeri = [int(t) for t in tokens]
-    except ValueError:
-        print(f"[!] Numeri non validi: {tokens}")
-        sys.exit(1)
+    numeri = [int(t) for t in tokens]
 
     if len(numeri) != 8 or not all(1 <= n <= 90 for n in numeri):
-        print(f"[!] Servono 8 numeri tra 1 e 90. Ricevuti: {numeri}")
+        print(f"[!] Servono 8 numeri 1-90. Ricevuti: {numeri}")
         sys.exit(1)
 
     history = []
     if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                history = json.load(f)
-        except Exception as e:
-            print(f"[!] Errore lettura {HISTORY_FILE}: {e}")
-            sys.exit(1)
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            history = json.load(f)
 
     for item in history:
         if item.get("concorso") == concorso:
