@@ -1828,5 +1828,20 @@
       57
     ],
     "url": "manual-input"
+  },
+  {
+    "concorso": 123,
+    "data": "03/10/2026",
+    "numeri": [
+      75,
+      59,
+      83,
+      88,
+      8,
+      22,
+      33,
+      84
+    ],
+    "url": "manual-input"
   }
 ]

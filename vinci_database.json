@@ -1,6 +1,6 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-03T16:55:11",
+  "updated_at": "2026-10-03T22:52:27",
   "rendita_mensile": 14180,
   "valore_attuale_rendita": 2803017.81,
   "budget_mode": {
@@ -17,35 +17,35 @@
       "id": 1,
       "profilo": "SIMPLE",
       "numeri": [
-        8,
-        10,
-        64,
-        70,
-        72,
-        78
+        12,
+        31,
+        54,
+        55,
+        56,
+        77
       ],
-      "somma": 302,
+      "somma": 285,
       "score_profilo": 1.0
     }
   ],
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 93.0,
+    "bankroll": 91.0,
     "peak": 100.0,
-    "drawdown_pct": 7.0,
-    "total_wagered": 12.0,
+    "drawdown_pct": 9.0,
+    "total_wagered": 14.0,
     "total_won": 5.0,
-    "balance": -7.0,
-    "n_plays": 4,
+    "balance": -9.0,
+    "n_plays": 5,
     "n_wins": 1,
-    "win_rate_pct": 25.0,
-    "roi_pct": -58.33,
+    "win_rate_pct": 20.0,
+    "roi_pct": -64.29,
     "is_stopped": false,
     "stop_until": null
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 70.99,
+    "chi2": 71.12,
     "hot_numbers": [
       49,
       18
@@ -54,29 +54,29 @@
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 122
+    "n": 123
   },
   "ev": {
     "ev_netto": -1.0114,
     "ev_percentuale": -50.57
   },
   "last_draw": {
-    "concorso": 122,
-    "data": "02/10/2026",
+    "concorso": 123,
+    "data": "03/10/2026",
     "numeri": [
-      7,
-      13,
-      18,
-      23,
-      26,
-      36,
-      55,
-      57
+      75,
+      59,
+      83,
+      88,
+      8,
+      22,
+      33,
+      84
     ]
   },
   "next_draw": {
-    "concorso": 123,
-    "data": "03/10/2026",
+    "concorso": 124,
+    "data": "04/10/2026",
     "ora": "20:00"
   }
 }
