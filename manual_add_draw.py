@@ -1,7 +1,7 @@
 """
 manual_add_draw.py
-Aggiunge un'estrazione manuale a vinci_history.json.
-Accetta numeri separati da virgola, spazio, o entrambi.
+Aggiunge/aggiorna un'estrazione manuale in vinci_history.json.
+Se il concorso esiste già, lo sovrascrive con i dati nuovi.
 """
 import json
 import os
@@ -14,9 +14,6 @@ HISTORY_FILE = "vinci_history.json"
 
 
 def main():
-    print(f"[debug] argc={len(sys.argv)}")
-    print(f"[debug] argv={sys.argv}")
-
     if len(sys.argv) < 4:
         print("[!] Uso: manual_add_draw.py <concorso> <data> <numeri>")
         sys.exit(1)
@@ -25,12 +22,7 @@ def main():
     data = sys.argv[2]
 
     rest = " ".join(sys.argv[3:])
-    print(f"[debug] rest='{rest}'")
-
-    tokens = re.split(r"[,\s]+", rest.strip())
-    tokens = [t for t in tokens if t]
-    print(f"[debug] tokens={tokens}")
-
+    tokens = [t for t in re.split(r"[,\s]+", rest.strip()) if t]
     numeri = [int(t) for t in tokens]
 
     if len(numeri) != 8 or not all(1 <= n <= 90 for n in numeri):
@@ -42,10 +34,12 @@ def main():
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             history = json.load(f)
 
-    for item in history:
-        if item.get("concorso") == concorso:
-            print(f"[*] Concorso {concorso} già presente. Skip.")
-            return
+    # Rimuovi eventuale entry vecchia con lo stesso concorso
+    before = len(history)
+    history = [h for h in history if h.get("concorso") != concorso]
+    removed = before - len(history)
+    if removed:
+        print(f"[*] Rimossa {removed} entry vecchia per concorso {concorso}")
 
     history.append({
         "concorso": concorso,
@@ -65,8 +59,9 @@ def main():
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2, ensure_ascii=False)
 
-    print(f"[+] Aggiunto concorso {concorso} ({data}): {numeri}")
-    print(f"[+] History: {len(history)} estrazioni")
+    print(f"[+] Concorso {concorso} ({data}): {numeri}")
+    print(f"[+] History: {len(history)} estrazioni (max concorso = "
+          f"{max((h.get('concorso', 0) for h in history), default=0)})")
 
 
 if __name__ == "__main__":
