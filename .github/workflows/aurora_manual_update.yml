@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       concorso:
-        description: 'Numero concorso (es. 122)'
+        description: 'Numero concorso (es. 124)'
         required: true
         type: string
       data:
-        description: 'Data GG/MM/AAAA (es. 02/10/2026)'
+        description: 'Data GG/MM/AAAA (es. 04/10/2026)'
         required: true
         type: string
       numeri:
-        description: 'Otto numeri (virgole o spazi, es. 7,13,18,23,26,36,55,57)'
+        description: 'Otto numeri (virgole o spazi)'
         required: true
         type: string
 
@@ -45,13 +45,10 @@ jobs:
 
       - name: Aggiungi estrazione manuale
         run: |
-          NUMERI_RAW="${{ github.event.inputs.numeri }}"
-          NUMERI_SPAZI=$(echo "$NUMERI_RAW" | tr ',' ' ')
-          echo "Numeri normalizzati: $NUMERI_SPAZI"
           python manual_add_draw.py \
             "${{ github.event.inputs.concorso }}" \
             "${{ github.event.inputs.data }}" \
-            $NUMERI_SPAZI
+            "${{ github.event.inputs.numeri }}"
 
       - name: Check post-estrazione
         run: python vinci_vita_check.py
@@ -60,13 +57,18 @@ jobs:
       - name: Esecuzione Engine + Telegram
         run: python vinci_vita_telegram.py
 
+      - name: Analisi pattern + Telegram
+        run: python analyze_history.py
+        continue-on-error: true
+
       - name: Salvataggio su GitHub
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           for file in vinci_history.json vinci_database.json \
-                      vinci_played.json vinci_bankroll.json; do
+                      vinci_played.json vinci_bankroll.json \
+                      pattern_report.json; do
             if [ -f "$file" ]; then
               git add "$file"
             fi
@@ -75,7 +77,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nessuna modifica."
           else
-            git commit -m "Manual update concorso ${{ github.event.inputs.concorso }} [skip ci]"
+            git commit -m "Manual update + pattern analysis [skip ci]"
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
