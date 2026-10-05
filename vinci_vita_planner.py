@@ -2,18 +2,24 @@
 vinci_vita_planner.py
 AURORA ENGINE v5.1 — Planner: N sestine con overlap controllato.
 
+FIX (2026-10-05):
+- load_history e save_json ora usano core_io.py (modulo condiviso).
+- Rimossa la definizione locale di save_json (va in conflitto con core_io).
+- Rimosso import json diretto (non più necessario).
+
 FIX (2026-09-29):
 - Usa AuroraPortfolioV3.build_multiple (overlap <= 2)
 - Calcola bias_analysis e regime_report come l'engine
 - Schema di output unificato con vinci_vita_engine.py
 """
-import json
 import os
 import sys
 import argparse
 import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta
+
+from core_io import load_json, save_json
 
 from vinci_vita_math import (
     RENDITA_ATTUALE_MENSILE, valore_attuale_rendita,
@@ -65,19 +71,8 @@ DATABASE_VERSION = "5.1"
 
 
 def load_history():
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return []
-
-
-def save_json(fp, data):
-    with open(fp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"[+] Salvato: {fp}")
+    data = load_json(HISTORY_FILE, [])
+    return data if isinstance(data, list) else []
 
 
 def send_telegram_message(text, parse_mode="HTML"):
