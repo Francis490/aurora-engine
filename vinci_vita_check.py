@@ -6,6 +6,16 @@ Verifica le sestine giocate contro l'ultima estrazione disponibile.
 Aggiorna vinci_played.json e vinci_bankroll.json (se c'è vincita).
 Invia Telegram con il risultato.
 
+FIX (2026-10-05):
+- #8: esito usa il risultato BEST (max punti), non results[0].
+  Prima prendeva i numeri_centrati della prima sestina anche quando
+  il punteggio massimo era di un'altra.
+- #9: bankroll aggiornato PRIMA di marcare esito_verificato=True.
+  Prima l'ordine era invertito: se record_win() falliva, la vincita
+  non veniva mai accreditata perché il flag era già True.
+  Ora se il bankroll fallisce, l'esito NON viene marcato come verificato
+  e il check verrà ritentato al prossimo run.
+
 FIX (2026-10-01):
 - Warning retroattivo: se giocata_il > data_estrazione, salta (falso positivo).
 - Allineato a v5.5.
@@ -213,16 +223,10 @@ def run_check(force=False, quiet=False):
     print(f"[*] Costo:         €{costo_totale:.2f}")
     print(f"[*] Netto:         €{totale_premio - costo_totale:+.2f}")
 
-    played_entry["esito"] = _format_punti(
-        max(r["punti"] for r in results),
-        results[0]["numeri_centrati"] if results else []
-    )
-    played_entry["punti_per_sestina"] = [r["punti"] for r in results]
-    played_entry["premio_reale"] = round(totale_premio, 2)
-    played_entry["esito_verificato"] = True
-    played_entry["esito_verificato_il"] = datetime.now().isoformat()
-    save_json(PLAYED_FILE, played)
-
+    # ========================================
+    # FIX #9: aggiorna bankroll PRIMA di salvare esito_verificato=True
+    # ========================================
+    bankroll_ok = True
     if totale_premio > 0:
         try:
             from vinci_vita_bankroll import BankrollManager
@@ -231,8 +235,34 @@ def run_check(force=False, quiet=False):
             print(f"[+] Bankroll aggiornato: +€{totale_premio:.2f}")
         except Exception as e:
             print(f"[!] Errore bankroll: {e}")
+            bankroll_ok = False
     else:
         print("[*] Nessuna vincita da accreditare.")
+
+    # ========================================
+    # FIX #8: usa il risultato BEST (max punti), non results[0]
+    # ========================================
+    if bankroll_ok:
+        best = max(results, key=lambda r: r["punti"]) if results else None
+        played_entry["esito"] = _format_punti(
+            best["punti"] if best else 0,
+            best["numeri_centrati"] if best else []
+        )
+        played_entry["punti_per_sestina"] = [r["punti"] for r in results]
+        played_entry["premio_reale"] = round(totale_premio, 2)
+        played_entry["esito_verificato"] = True
+        played_entry["esito_verificato_il"] = datetime.now().isoformat()
+        save_json(PLAYED_FILE, played)
+    else:
+        print("[!] Bankroll NON aggiornato. Esito NON marcato come verificato.")
+        print("[!] Il check verrà ritentato al prossimo run.")
+        return {
+            "concorso": concorso,
+            "results": results,
+            "totale_premio": totale_premio,
+            "netto": totale_premio - costo_totale,
+            "bankroll_ok": False,
+        }
 
     if not quiet:
         report = _build_telegram_report(
@@ -249,6 +279,7 @@ def run_check(force=False, quiet=False):
         "results": results,
         "totale_premio": totale_premio,
         "netto": totale_premio - costo_totale,
+        "bankroll_ok": True,
     }
 
 
