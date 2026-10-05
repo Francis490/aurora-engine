@@ -12,8 +12,9 @@ on:
 permissions:
   contents: write
 
+# Fix #4: stesso concurrency group di tutti i workflow Aurora
 concurrency:
-  group: aurora-backfill-${{ github.ref }}
+  group: aurora-write-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -22,6 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       MPLBACKEND: Agg
+      BACKFILL_DAYS: ${{ github.event.inputs.days }}
 
     steps:
       - name: Checkout Repository
@@ -40,7 +42,7 @@ jobs:
 
       - name: Backfill History
         run: |
-          DAYS="${{ github.event.inputs.days }}"
+          DAYS="$BACKFILL_DAYS"
           # Cap a 60 giorni per sicurezza
           if [ "$DAYS" -gt 60 ]; then
             DAYS=60
