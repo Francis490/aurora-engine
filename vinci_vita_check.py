@@ -2,23 +2,16 @@
 vinci_vita_check.py
 AURORA ENGINE v5.5 — Check post-estrazione automatico.
 
-Verifica le sestine giocate contro l'ultima estrazione disponibile.
-Aggiorna vinci_played.json e vinci_bankroll.json (se c'è vincita).
-Invia Telegram con il risultato.
+FIX (2026-10-05 v3):
+- load_json e save_json ora importati da core_io.py (modulo condiviso
+  tra Aurora e Venus). Vedi CORE_SYNC.md.
 
-FIX (2026-10-05):
+FIX (2026-10-05 v2):
 - #8: esito usa il risultato BEST (max punti), non results[0].
-  Prima prendeva i numeri_centrati della prima sestina anche quando
-  il punteggio massimo era di un'altra.
 - #9: bankroll aggiornato PRIMA di marcare esito_verificato=True.
-  Prima l'ordine era invertito: se record_win() falliva, la vincita
-  non veniva mai accreditata perché il flag era già True.
-  Ora se il bankroll fallisce, l'esito NON viene marcato come verificato
-  e il check verrà ritentato al prossimo run.
 
 FIX (2026-10-01):
 - Warning retroattivo: se giocata_il > data_estrazione, salta (falso positivo).
-- Allineato a v5.5.
 """
 import json
 import os
@@ -28,30 +21,13 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 
+from core_io import load_json, save_json
+
 
 HISTORY_FILE = "vinci_history.json"
 PLAYED_FILE = "vinci_played.json"
 
 DATABASE_VERSION = "5.5"
-
-
-def load_json(fp, default):
-    if os.path.exists(fp):
-        try:
-            with open(fp, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[!] Errore lettura {fp}: {e}")
-    return default
-
-
-def save_json(fp, data):
-    try:
-        with open(fp, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[+] Salvato {fp}")
-    except Exception as e:
-        print(f"[!] Errore salvataggio {fp}: {e}")
 
 
 def send_telegram_message(text, parse_mode="HTML"):
@@ -223,9 +199,7 @@ def run_check(force=False, quiet=False):
     print(f"[*] Costo:         €{costo_totale:.2f}")
     print(f"[*] Netto:         €{totale_premio - costo_totale:+.2f}")
 
-    # ========================================
     # FIX #9: aggiorna bankroll PRIMA di salvare esito_verificato=True
-    # ========================================
     bankroll_ok = True
     if totale_premio > 0:
         try:
@@ -239,9 +213,7 @@ def run_check(force=False, quiet=False):
     else:
         print("[*] Nessuna vincita da accreditare.")
 
-    # ========================================
     # FIX #8: usa il risultato BEST (max punti), non results[0]
-    # ========================================
     if bankroll_ok:
         best = max(results, key=lambda r: r["punti"]) if results else None
         played_entry["esito"] = _format_punti(
