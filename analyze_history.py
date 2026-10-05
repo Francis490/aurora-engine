@@ -7,8 +7,11 @@ Genera:
 - Messaggio Telegram riassuntivo
 
 Eseguito automaticamente dopo "Aurora Manual Update".
+
+FIX (2026-10-05):
+- load_history e save_json ora usano core_io.py (modulo condiviso).
+- Rimosso import json diretto (non più necessario).
 """
-import json
 import os
 import urllib.parse
 import urllib.request
@@ -16,14 +19,16 @@ from collections import Counter
 from itertools import combinations
 from statistics import mean, stdev
 
+from core_io import load_json, save_json
+
 
 HISTORY_FILE = "vinci_history.json"
 PATTERN_FILE = "pattern_report.json"
 
 
 def load_history():
-    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    data = load_json(HISTORY_FILE, [])
+    return data if isinstance(data, list) else []
 
 
 def send_telegram(text):
@@ -129,9 +134,7 @@ def main():
         "decade_distribution": {str(i): decade_count[i] for i in range(9)},
     }
 
-    with open(PATTERN_FILE, "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2, ensure_ascii=False)
-    print(f"[+] Salvato: {PATTERN_FILE}")
+    save_json(PATTERN_FILE, report)
 
     # === TELEGRAM ===
     lines = []
