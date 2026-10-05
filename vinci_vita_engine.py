@@ -2,17 +2,18 @@
 vinci_vita_engine.py
 AURORA ENGINE v5.5 — Orchestratore semplificato.
 
-FIX (2026-10-05):
+FIX (2026-10-05 v2):
+- Aggiunto campo generator_info nel payload: dichiara esplicitamente che
+  bias_analysis e regime_report sono DESCRITTIVI, non influenzano la
+  generazione. Il generatore è random sampling con filtro somma 240-310.
+
+FIX (2026-10-05 v1):
 - Aggiunto portfolio_coverage al payload (mancava, index.html lo aspetta).
 - Aggiunto bias_analysis.profile_weights al payload (mancava, index.html lo aspetta).
-  Con questi due campi, la dashboard non mostra più "—" nel footer
-  e nella bias card dopo un run dell'engine.
 
 FIX (2026-10-01):
 - N_SESTINE_DEFAULT = 1 (una sola sestina per concorso).
 - Rimosso ogni accoppiamento con filtri/scoring complessi.
-- Rimosso fingerprint engine dai passaggi.
-- Rimosso anti-crowd.
 """
 import json
 import os
@@ -201,10 +202,8 @@ def build_payload(history, sdata, budget, rendita, ev,
     now = datetime.now()
     lc, ldate, ln, nc, nd = _next_draw_info(history)
 
-    # FIX (2026-10-05): portfolio_coverage mancava, ora calcolato
     coverage = _portfolio_coverage(sdata)
 
-    # FIX (2026-10-05): bias_analysis.profile_weights mancava, ora incluso
     bias_payload = None
     if bias_result:
         bias_payload = {
@@ -214,6 +213,21 @@ def build_payload(history, sdata, budget, rendita, ev,
             "cold_numbers": bias_result.get("cold_numbers", [])[:5],
             "profile_weights": bias_result.get("profile_weights"),
         }
+
+    # FIX (2026-10-05 v2): campo esplicito per chiarire che bias e regime
+    # sono DESCRITTIVI, non influenzano la generazione.
+    generator_info = {
+        "type": "simple_random_sum_filter",
+        "description": "Random sampling dal pool 1-90 con filtro somma 240-310.",
+        "bias_analysis_used": False,
+        "regime_detection_used": False,
+        "fingerprint_used": False,
+        "note": (
+            "Le analisi bias_analysis e regime_report sono DESCRITTIVE: "
+            "non influenzano la generazione delle sestine. Il generatore "
+            "usa random sampling con vincolo sulla somma."
+        ),
+    }
 
     return {
         "version": DATABASE_VERSION,
@@ -225,6 +239,7 @@ def build_payload(history, sdata, budget, rendita, ev,
         "costo_totale": round(len(sdata) * COSTO_GIOCATA_EUR, 2),
         "sestinas": sdata,
         "portfolio_coverage": coverage,
+        "generator_info": generator_info,
         "bankroll_state": bankroll_state,
         "bias_analysis": bias_payload,
         "regime_report": regime,
@@ -244,4 +259,5 @@ if __name__ == "__main__":
         s = payload['sestinas'][0]['numeri'] if payload['sestinas'] else '—'
         print(f"Sestina: {s}")
         print(f"Coverage: {payload.get('portfolio_coverage', 'N/A')}")
+        print(f"Generator: {payload.get('generator_info', {}).get('type', 'N/A')}")
         print("=" * 70)
