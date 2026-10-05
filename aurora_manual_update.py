@@ -2,6 +2,10 @@
 aurora_manual_update.py
 AURORA ENGINE — Manual update da GitHub Actions form.
 
+FIX (2026-10-05 v2):
+- load_json e save_json ora importati da core_io.py (modulo condiviso
+  tra Aurora e Venus). Vedi CORE_SYNC.md.
+
 FIX (2026-09-29):
 - Aggiunto controllo unicità degli 8 numeri
 - Validazione più severa (data valida, concorso positivo)
@@ -19,28 +23,11 @@ import sys
 import re
 from datetime import datetime
 
+from core_io import load_json, save_json
+
 
 HISTORY_FILE = "vinci_history.json"
 PLAYED_FILE = "vinci_played.json"
-
-
-def load_json(fp, default):
-    if os.path.exists(fp):
-        try:
-            with open(fp, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[!] Errore lettura {fp}: {e}")
-    return default
-
-
-def save_json(fp, data):
-    try:
-        with open(fp, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[+] Salvato: {fp}")
-    except Exception as e:
-        print(f"[!] Errore salvataggio {fp}: {e}")
 
 
 def parse_numeri(s):
@@ -61,7 +48,6 @@ def parse_sestine(s):
     result = []
     for block in s.split("|"):
         nums = parse_numeri(block)
-        # Validazione: 6 numeri distinti in 1-90
         if (len(nums) == 6
                 and len(set(nums)) == 6
                 and all(1 <= n <= 90 for n in nums)):
