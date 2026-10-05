@@ -8,6 +8,11 @@ APPROCCIO v5 (2026-10-01) — DEFINITIVO:
 - Ritorna JSON strutturato: date ISO, link, titolo, contenuto HTML
 - Zero parsing fragile di href/URL
 
+FIX (2026-10-05):
+- load_history e save_history ora usano core_io.py (modulo condiviso).
+- save_debug continua a usare json.dump diretto (file di debug temporanei,
+  non vogliamo .bak e .tmp nella cartella debug_agimeg/).
+
 Uso:
     python fetch_vinci_draw.py              # recupera oggi
     python fetch_vinci_draw.py --backfill 30
@@ -20,6 +25,8 @@ import time
 from datetime import datetime, timedelta
 
 import requests
+
+from core_io import load_json, save_json
 
 
 HISTORY_FILE = "vinci_history.json"
@@ -45,6 +52,11 @@ def ensure_debug_dir():
 
 
 def save_debug(name, content):
+    """
+    Salva un file di debug nella cartella debug_agimeg/.
+    Nota: usa json.dump diretto (non core_io) perché questi file
+    non vanno backuppati e non hanno bisogno di atomic write.
+    """
     ensure_debug_dir()
     path = os.path.join(DEBUG_DIR, name)
     try:
@@ -58,22 +70,13 @@ def save_debug(name, content):
 
 
 def load_history():
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[!] Errore lettura {HISTORY_FILE}: {e}")
-    return []
+    data = load_json(HISTORY_FILE, [])
+    return data if isinstance(data, list) else []
 
 
 def save_history(data):
-    try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[+] Salvato {HISTORY_FILE} ({len(data)} estrazioni)")
-    except Exception as e:
-        print(f"[!] Errore salvataggio: {e}")
+    save_json(HISTORY_FILE, data)
+    print(f"[+] Salvato {HISTORY_FILE} ({len(data)} estrazioni)")
 
 
 def fetch_posts(page=1, per_page=20):
