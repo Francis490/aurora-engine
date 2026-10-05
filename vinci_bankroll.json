@@ -1,66 +1,121 @@
 {
   "initial_bankroll": 100.0,
-  "bankroll": 87.0,
+  "bankroll": 70.0,
   "peak": 100.0,
   "stake_history": [
     {
-      "ts": "2026-09-29T00:15:02.938384",
-      "stake": 2.0,
+      "ts": "2026-09-20T00:00:00",
+      "stake": 4.0,
       "won": 0.0,
-      "bankroll_after": 98.0
+      "bankroll_after": 96.0
     },
     {
-      "ts": "2026-09-30T14:03:30.730981",
-      "stake": 4.0,
+      "ts": "2026-09-21T00:00:00",
+      "stake": 2.0,
       "won": 0.0,
       "bankroll_after": 94.0
     },
     {
-      "ts": "2026-10-01T01:49:23.895804",
-      "stake": 4.0,
-      "won": 0.0,
-      "bankroll_after": 90.0
-    },
-    {
-      "ts": "2026-10-01T23:54:39.107543",
+      "ts": "2026-09-22T00:00:00",
       "stake": 2.0,
       "won": 0.0,
-      "bankroll_after": 88.0
+      "bankroll_after": 92.0
     },
     {
-      "ts": "2026-10-03T16:55:11.893356",
-      "stake": 2.0,
+      "ts": "2026-09-22T00:00:00",
+      "stake": 6.0,
       "won": 0.0,
-      "bankroll_after": 91.0
+      "bankroll_after": 86.0
     },
     {
-      "ts": "2026-10-03T22:52:27.504750",
-      "stake": 2.0,
+      "ts": "2026-09-23T00:00:00",
+      "stake": 6.0,
       "won": 0.0,
-      "bankroll_after": 89.0
+      "bankroll_after": 80.0
     },
     {
-      "ts": "2026-10-04T19:33:49.487597",
+      "ts": "2026-09-24T00:00:00",
       "stake": 2.0,
       "won": 0.0,
-      "bankroll_after": 87.0
+      "bankroll_after": 78.0
+    },
+    {
+      "ts": "2026-09-25T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 76.0
+    },
+    {
+      "ts": "2026-09-26T00:00:00",
+      "stake": 2.0,
+      "won": 5.0,
+      "bankroll_after": 79.0
+    },
+    {
+      "ts": "2026-09-27T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 77.0
+    },
+    {
+      "ts": "2026-09-29T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 75.0
+    },
+    {
+      "ts": "2026-10-01T00:00:00",
+      "stake": 2.0,
+      "won": 5.0,
+      "bankroll_after": 78.0
+    },
+    {
+      "ts": "2026-10-01T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 76.0
+    },
+    {
+      "ts": "2026-10-03T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 74.0
+    },
+    {
+      "ts": "2026-10-03T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 72.0
+    },
+    {
+      "ts": "2026-10-04T00:00:00",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 70.0
     }
   ],
   "win_history": [
     {
-      "ts": "2026-10-02T21:28:01.900380",
+      "ts": "2026-09-26T00:00:00",
+      "stake": 0.0,
+      "won": 5.0,
+      "net": 5.0,
+      "note": "Concorso 117"
+    },
+    {
+      "ts": "2026-10-01T00:00:00",
       "stake": 0.0,
       "won": 5.0,
       "net": 5.0,
       "note": "Concorso 121"
     }
   ],
-  "total_wagered": 18.0,
-  "total_won": 5.0,
-  "n_plays": 7,
-  "n_wins": 1,
+  "total_wagered": 40.0,
+  "total_won": 10.0,
+  "n_plays": 15,
+  "n_wins": 2,
   "stop_until": null,
   "created_at": "2026-09-29T00:15:02.938377",
-  "updated_at": "2026-10-04T19:33:49.487607",
-  "roi_pct": -72.22
+  "updated_at": "2026-10-05T15:45:00.000000",
+  "roi_pct": -75.0
 }
