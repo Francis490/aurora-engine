@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-04T22:54:26",
-  "rendita_mensile": 14260,
-  "valore_attuale_rendita": 2818831.74,
+  "updated_at": "2026-10-05T14:47:22",
+  "rendita_mensile": 14250,
+  "valore_attuale_rendita": 2816855.0,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -17,66 +17,80 @@
       "id": 1,
       "profilo": "SIMPLE",
       "numeri": [
-        13,
-        27,
-        41,
-        49,
-        60,
-        85
+        2,
+        21,
+        33,
+        39,
+        63,
+        90
       ],
-      "somma": 275,
+      "somma": 248,
       "score_profilo": 1.0
     }
   ],
+  "portfolio_coverage": 0.8222,
+  "generator_info": {
+    "type": "simple_random_sum_filter",
+    "description": "Random sampling dal pool 1-90 con filtro somma 240-310.",
+    "bias_analysis_used": false,
+    "regime_detection_used": false,
+    "fingerprint_used": false,
+    "note": "Le analisi bias_analysis e regime_report sono DESCRITTIVE: non influenzano la generazione delle sestine. Il generatore usa random sampling con vincolo sulla somma."
+  },
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 87.0,
+    "bankroll": 70.0,
     "peak": 100.0,
-    "drawdown_pct": 13.0,
-    "total_wagered": 18.0,
-    "total_won": 5.0,
-    "balance": -13.0,
-    "n_plays": 7,
-    "n_wins": 1,
-    "win_rate_pct": 14.29,
-    "roi_pct": -72.22,
+    "drawdown_pct": 30.0,
+    "total_wagered": 40.0,
+    "total_won": 10.0,
+    "balance": -30.0,
+    "n_plays": 15,
+    "n_wins": 2,
+    "win_rate_pct": 13.33,
+    "roi_pct": -75.0,
     "is_stopped": false,
     "stop_until": null
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 72.4,
+    "chi2": 70.46,
     "hot_numbers": [
-      49,
-      18
+      18,
+      49
     ],
-    "cold_numbers": []
+    "cold_numbers": [],
+    "profile_weights": {
+      "A_trend": 1.0,
+      "B_contrarian": 1.0,
+      "C_coverage": 1.0
+    }
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 124
+    "n": 125
   },
   "ev": {
-    "ev_netto": -1.0107,
-    "ev_percentuale": -50.53
+    "ev_netto": -1.0108,
+    "ev_percentuale": -50.54
   },
   "last_draw": {
-    "concorso": 124,
-    "data": "04/10/2026",
+    "concorso": 999,
+    "data": "05/10/2026",
     "numeri": [
-      36,
-      15,
-      58,
-      26,
-      16,
-      62,
-      90,
-      55
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
     ]
   },
   "next_draw": {
-    "concorso": 125,
-    "data": "05/10/2026",
+    "concorso": 1000,
+    "data": "06/10/2026",
     "ora": "20:00"
   }
 }

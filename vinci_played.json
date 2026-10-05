@@ -7,8 +7,22 @@
       "giocata_il": "20/09/2026",
       "costo_eur": 4.0,
       "sestine": [
-        [5, 22, 30, 34, 65, 84],
-        [3, 5, 35, 60, 67, 70]
+        [
+          5,
+          22,
+          30,
+          34,
+          65,
+          84
+        ],
+        [
+          3,
+          5,
+          35,
+          60,
+          67,
+          70
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -21,7 +35,14 @@
       "giocata_il": "21/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [11, 16, 48, 59, 67, 68]
+        [
+          11,
+          16,
+          48,
+          59,
+          67,
+          68
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -34,7 +55,14 @@
       "giocata_il": "22/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [16, 35, 46, 51, 66, 68]
+        [
+          16,
+          35,
+          46,
+          51,
+          66,
+          68
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -47,9 +75,30 @@
       "giocata_il": "22/09/2026",
       "costo_eur": 6.0,
       "sestine": [
-        [11, 14, 52, 65, 66, 78],
-        [27, 30, 33, 55, 70, 85],
-        [11, 23, 33, 46, 51, 87]
+        [
+          11,
+          14,
+          52,
+          65,
+          66,
+          78
+        ],
+        [
+          27,
+          30,
+          33,
+          55,
+          70,
+          85
+        ],
+        [
+          11,
+          23,
+          33,
+          46,
+          51,
+          87
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -62,9 +111,30 @@
       "giocata_il": "23/09/2026",
       "costo_eur": 6.0,
       "sestine": [
-        [11, 14, 65, 66, 69, 78],
-        [16, 27, 30, 55, 59, 85],
-        [11, 23, 33, 48, 51, 87]
+        [
+          11,
+          14,
+          65,
+          66,
+          69,
+          78
+        ],
+        [
+          16,
+          27,
+          30,
+          55,
+          59,
+          85
+        ],
+        [
+          11,
+          23,
+          33,
+          48,
+          51,
+          87
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -77,7 +147,14 @@
       "giocata_il": "24/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [12, 30, 40, 53, 57, 83]
+        [
+          12,
+          30,
+          40,
+          53,
+          57,
+          83
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -90,7 +167,14 @@
       "giocata_il": "25/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [12, 30, 40, 53, 70, 84]
+        [
+          12,
+          30,
+          40,
+          53,
+          70,
+          84
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
@@ -103,11 +187,20 @@
       "giocata_il": "26/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [1, 31, 36, 64, 78, 86]
+        [
+          1,
+          31,
+          36,
+          64,
+          78,
+          86
+        ]
       ],
       "premio_reale": 5.0,
       "esito": "2 punti",
-      "punti_per_sestina": [2],
+      "punti_per_sestina": [
+        2
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v4.0 — 1 sestina"
     },
@@ -117,11 +210,20 @@
       "giocata_il": "27/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [8, 17, 42, 63, 71, 85]
+        [
+          8,
+          17,
+          42,
+          63,
+          71,
+          85
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "1 punto",
-      "punti_per_sestina": [1],
+      "punti_per_sestina": [
+        1
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v4.0 — 1 sestina"
     },
@@ -131,11 +233,20 @@
       "giocata_il": "29/09/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [22, 24, 25, 34, 38, 48]
+        [
+          22,
+          24,
+          25,
+          34,
+          38,
+          48
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "0 punti",
-      "punti_per_sestina": [0],
+      "punti_per_sestina": [
+        0
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v5.0 — 1 sestina"
     },
@@ -156,11 +267,20 @@
       "giocata_il": "01/10/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [19, 26, 42, 49, 71, 88]
+        [
+          19,
+          26,
+          42,
+          49,
+          71,
+          88
+        ]
       ],
       "premio_reale": 5.0,
       "esito": "2 punti (49, 88)",
-      "punti_per_sestina": [2],
+      "punti_per_sestina": [
+        2
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v5.5 — 1 sestina (semplificato)"
     },
@@ -170,11 +290,20 @@
       "giocata_il": "01/10/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [17, 35, 46, 57, 62, 65]
+        [
+          17,
+          35,
+          46,
+          57,
+          62,
+          65
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "1 punto (57)",
-      "punti_per_sestina": [1],
+      "punti_per_sestina": [
+        1
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v5.5 — 1 sestina"
     },
@@ -184,11 +313,20 @@
       "giocata_il": "03/10/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [8, 10, 64, 70, 72, 78]
+        [
+          8,
+          10,
+          64,
+          70,
+          72,
+          78
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "1 punto (08)",
-      "punti_per_sestina": [1],
+      "punti_per_sestina": [
+        1
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v5.5 — 1 sestina"
     },
@@ -198,11 +336,20 @@
       "giocata_il": "03/10/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [12, 31, 54, 55, 56, 77]
+        [
+          12,
+          31,
+          54,
+          55,
+          56,
+          77
+        ]
       ],
       "premio_reale": 0.0,
       "esito": "1 punto (55)",
-      "punti_per_sestina": [1],
+      "punti_per_sestina": [
+        1
+      ],
       "esito_verificato": true,
       "note": "Aurora Engine v5.5 — 1 sestina"
     },
@@ -212,11 +359,35 @@
       "giocata_il": "04/10/2026",
       "costo_eur": 2.0,
       "sestine": [
-        [13, 27, 41, 49, 60, 85]
+        [
+          13,
+          27,
+          41,
+          49,
+          60,
+          85
+        ]
       ],
       "premio_reale": 0.0,
       "esito_verificato": false,
       "note": "Aurora Engine v5.5 — 1 sestina (in attesa)"
+    },
+    {
+      "concorso": 1000,
+      "data": "06/10/2026",
+      "giocata_il": "05/10/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          2,
+          21,
+          33,
+          39,
+          63,
+          90
+        ]
+      ],
+      "note": "Aurora Engine v5.5 — 1 sestine"
     }
   ]
 }

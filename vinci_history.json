@@ -1784,7 +1784,7 @@
     ],
     "url": "manual-update"
   },
-    {
+  {
     "concorso": 119,
     "data": "29/09/2026",
     "numeri": [
@@ -1858,5 +1858,20 @@
       55
     ],
     "url": "manual-input"
+  },
+  {
+    "concorso": 999,
+    "data": "05/10/2026",
+    "numeri": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "url": "manual-update"
   }
 ]
