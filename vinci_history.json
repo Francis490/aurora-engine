@@ -1784,20 +1784,20 @@
     ],
     "url": "manual-update"
   },
-  {
-    "concorso": 120,
-    "data": "30/09/2026",
+    {
+    "concorso": 119,
+    "data": "29/09/2026",
     "numeri": [
       36,
-      39,
-      44,
+      72,
+      9,
       26,
-      49,
-      12,
-      15,
-      82
+      42,
+      70,
+      54,
+      57
     ],
-    "url": "manual-import"
+    "url": "manual-update"
   },
   {
     "concorso": 121,
