@@ -2,12 +2,15 @@
 vinci_vita_telegram.py
 AURORA ENGINE v5.5 — Bot Telegram sender.
 
+FIX (2026-10-05):
+- load_played e save_played ora usano core_io.py (modulo condiviso).
+- Rimosso import json diretto (non più necessario).
+
 FIX (2026-10-01):
 - Versione allineata a 5.5
 - Rimosso ogni riferimento ad anti-crowd (ACv3)
 - Report semplificato: 1 sestina
 """
-import json
 import os
 import sys
 import argparse
@@ -15,11 +18,18 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 
+from core_io import load_json, save_json
+
 
 PLAYED_FILE = "vinci_played.json"
 TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_SPLIT_THRESHOLD = 3800
 DATABASE_VERSION = "5.5"
+
+DEFAULT_PLAYED = {
+    "note": "Registro delle sestine giocate con Aurora Engine.",
+    "played": [],
+}
 
 
 def send_telegram_message(text, parse_mode="HTML"):
@@ -68,22 +78,16 @@ def send_telegram_report_smart(text):
 
 
 def load_played():
-    if os.path.exists(PLAYED_FILE):
-        try:
-            with open(PLAYED_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"note": "Registro delle sestine giocate con Aurora Engine.", "played": []}
+    data = load_json(PLAYED_FILE, DEFAULT_PLAYED)
+    if not isinstance(data, dict):
+        return dict(DEFAULT_PLAYED)
+    if "played" not in data or not isinstance(data["played"], list):
+        data["played"] = []
+    return data
 
 
 def save_played(data):
-    try:
-        with open(PLAYED_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[+] Salvato {PLAYED_FILE}")
-    except Exception as e:
-        print(f"[!] Errore salvataggio {PLAYED_FILE}: {e}")
+    save_json(PLAYED_FILE, data)
 
 
 def _update_bankroll_for_new_play(costo):
