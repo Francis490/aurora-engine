@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-05T14:47:22",
-  "rendita_mensile": 14250,
-  "valore_attuale_rendita": 2816855.0,
+  "updated_at": "2026-10-05T19:07:35",
+  "rendita_mensile": 14290,
+  "valore_attuale_rendita": 2824761.96,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -17,14 +17,14 @@
       "id": 1,
       "profilo": "SIMPLE",
       "numeri": [
-        2,
-        21,
+        17,
+        22,
+        31,
         33,
-        39,
-        63,
-        90
+        70,
+        86
       ],
-      "somma": 248,
+      "somma": 259,
       "score_profilo": 1.0
     }
   ],
@@ -49,15 +49,15 @@
     "n_wins": 2,
     "win_rate_pct": 13.33,
     "roi_pct": -75.0,
-    "is_stopped": false,
-    "stop_until": null
+    "is_stopped": true,
+    "stop_until": "2026-10-08T14:47:22.193765"
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 70.46,
+    "chi2": 71.54,
     "hot_numbers": [
-      18,
-      49
+      49,
+      18
     ],
     "cold_numbers": [],
     "profile_weights": {
@@ -71,25 +71,25 @@
     "n": 125
   },
   "ev": {
-    "ev_netto": -1.0108,
-    "ev_percentuale": -50.54
+    "ev_netto": -1.0104,
+    "ev_percentuale": -50.52
   },
   "last_draw": {
-    "concorso": 999,
+    "concorso": 125,
     "data": "05/10/2026",
     "numeri": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8
+      54,
+      41,
+      32,
+      80,
+      26,
+      16,
+      71,
+      88
     ]
   },
   "next_draw": {
-    "concorso": 1000,
+    "concorso": 126,
     "data": "06/10/2026",
     "ora": "20:00"
   }
