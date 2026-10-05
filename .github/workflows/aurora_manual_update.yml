@@ -15,9 +15,18 @@ on:
         description: 'Otto numeri (virgole o spazi)'
         required: true
         type: string
+      sestine:
+        description: 'Sestine giocate (formato: 16,35,46,51,66,68 | 5,22,30,34,65,84) — opzionale'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: aurora-write-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -27,6 +36,11 @@ jobs:
       MPLBACKEND: Agg
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # Fix #3: input passati via env (no interpolazione diretta in shell)
+      MANUAL_CONCORSO: ${{ github.event.inputs.concorso }}
+      MANUAL_DATA: ${{ github.event.inputs.data }}
+      MANUAL_NUMERI: ${{ github.event.inputs.numeri }}
+      MANUAL_SESTINE: ${{ github.event.inputs.sestine }}
 
     steps:
       - name: Checkout
@@ -43,12 +57,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Aggiungi estrazione manuale
-        run: |
-          python manual_add_draw.py \
-            "${{ github.event.inputs.concorso }}" \
-            "${{ github.event.inputs.data }}" \
-            "${{ github.event.inputs.numeri }}"
+      - name: Aggiungi estrazione manuale (con validazione severa)
+        run: python aurora_manual_update.py
 
       - name: Check post-estrazione
         run: python vinci_vita_check.py
