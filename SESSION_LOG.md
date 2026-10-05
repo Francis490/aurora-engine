@@ -1,121 +1,120 @@
 # SESSION_LOG — Aurora Engine
 
 > Diario di bordo versionato. Aggiornare a ogni sessione significativa.
-> Ultimo aggiornamento: 2026-09-29
+> Ultimo aggiornamento: 2026-10-05
 
 ### Stato attuale
-- Versione progetto: **v0.1 (Fase 3 completata)**
-- Dataset: **concorso 119** (con buco 110→114)
-- Ultimo concorso registrato: **119** (29/09/2026)
-- Prossimo concorso: **120** (30/09/2026)
-- Bot Telegram: `@FrancisauroravinciBot` (configurato, non ancora operativo)
-- **Fase attuale**: Fase 3 (orchestratore) completata → Fase 4 in attesa
-- Priorità: **Venus Vortex prima**, poi ripresa Aurora Engine
+- Versione progetto: **v5.5.1** (fix critici 2026-10-05)
+- Dataset: **125 concorsi** (dal 03/06/2026 al 04/10/2026)
+- Ultimo concorso registrato: **124** (04/10/2026)
+- Prossimo concorso: **125** (05/10/2026)
+- Bankroll: **70€** (100 iniziale - 40 speso + 10 vinto)
+- ROI: **-75%** (dato reale, non stimato)
+- Bot Telegram: `@FrancisauroravinciBot` (operativo)
+- Generatore: **random sampling** con filtro somma 240-310 (onesto, senza filtri finti)
+- SKIP mode: **se EV < -0.55, nessuna sestina** (severo)
 
 ### Workflow GitHub attivi
-- (nessuno schedulato — Fase 5 non ancora implementata)
+- **Aurora Manual Update** (workflow_dispatch, con input sestine opzionale)
+- **Aurora Planner** (workflow_dispatch, cron disattivato)
+- **Aurora Engine — Backfill History** (workflow_dispatch, con input days)
+- **Generate PWA Icons** (workflow_dispatch, auto-commit icone)
+- Tutti condividono lo stesso **concurrency group** `aurora-write-${{ github.ref }}` → nessuna race condition
 
 ### Lavoro in sospeso
 - ~~Fase 0: fetch_vinci_draw.py~~ ✅
 - ~~Fase 1: vinci_vita_math.py~~ ✅
 - ~~Fase 2: vinci_vita_generator.py~~ ✅
 - ~~Fase 3: vinci_vita_engine.py~~ ✅
-- **Fase 4: vinci_vita_telegram.py** ← prossimo
-- Fase 5: workflow + PWA
-- Backfill concorsi 110→119
+- ~~Fase 4: vinci_vita_telegram.py~~ ✅
+- ~~Fase 5: workflow + PWA~~ ✅
+- ~~14 fix critici 2026-10-05~~ ✅
+- Monitoraggio concorsi 125+
 
 ### Problemi noti
-- Nessun workflow schedulato → nessuna raccolta automatica
-- Buco dataset 110→119 (10 concorsi mancanti)
-- Fase 4 non implementata → bot Telegram configurato ma inattivo
+- Nessuno bloccante.
+- `fetch_vinci_draw.py` funziona ma il formato HTML di AGIMEG può cambiare (retry con backoff attivo).
 
 ---
 
-## 2026-09-20 — Nascita del progetto
+## 2026-10-05 — Fix critici (14 fix in un giorno)
 
-**Obiettivo:** Costruire un bot Telegram + sistema di analisi quantitativa per Super Win for Life.
-
-**Fatto:**
-- Creato repo `aurora-engine` su GitHub
-- Attivato GitHub Pages
-- Inizializzato README, requirements.txt, SESSION_LOG
-- Configurati GitHub Secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-- Creato bot Telegram: `@FrancisauroravinciBot`
-- Definito architettura in 5 fasi:
-  - Fase 0: raccolta dati (fetch_vinci_draw.py)
-  - Fase 1: matematica (vinci_vita_math.py)
-  - Fase 2: generatore calibrato (vinci_vita_generator.py)
-  - Fase 3: orchestratore (vinci_vita_engine.py)
-  - Fase 4: bot Telegram (vinci_vita_telegram.py)
-  - Fase 5: workflow + PWA
-- Scritti i moduli Fase 0, 1, 2, 3.
-
-**Problemi:**
-- Nessuno. Progetto nuovo, zero interferenze con Venus Vortex.
-
-**Decisioni:**
-- Repo separato da Venus Vortex.
-- Bot Telegram separato (`@FrancisauroravinciBot`).
-- Super Win for Life ha rendita CONDIVISA → anti-crowd utile.
-- Estrazioni giornaliere → serve cron giornaliero.
-- Fonte dati: AGIMEG (non Sisal, troppo complesso).
-
-**Prossimo:**
-- Scrivere Fase 4 (bot Telegram).
-- Scrivere Fase 5 (workflow + PWA).
-
----
-
-## 2026-09-20 — Prima vincita documentata (giocata manuale)
-
-**Obiettivo:** Documentare la prima vincita ottenuta con il metodo Aurora.
+**Obiettivo:** sistemare 14 bug critici accumulati dalla fondazione del progetto.
 
 **Fatto:**
-- Estrazione Super Win for Life del **19/09/2026** (Concorso **109**)
-- Numeri estratti: `[5, 8, 17, 34, 48, 65, 80, 89]`
-- Sestina giocata: `[5, 30, 31, 34, 65, 80]`
-- **Punti: 4** (centrati: 5, 34, 65, 80)
-- **Vincita: € 178,59** (categoria 4 punti, quota fissa di concorso)
-- **ROI sulla giocata: +8.830%**
+- **#0** Stop cron + concurrency group unificato per tutti i workflow
+- **#1** `vinci_vita_check.py` fix order in `vinci_vita_check` (dopo #9 in realtà)
+- **#2** Riscrittura `fetch_latest_draw.py` (proxy unico + retry + fail esplicito)
+- **#3** `venus_utils.get_year_from_concorso` parametrico via `YEAR_RANGES`
+- **#4** `analysis.html` sort cronologico per `(anno, concorso)`
+- **#5** Rimozione `true_mimic_generator.py` (OOM bomb)
+- **#6** Consolidamento jackpot su `venus_manual_override.json`
+- **#7** EV onesto: rimosso `anti_crowd_factor=2.5`
+- **#8** `backtest_e2e.py` rimosso
+- **#9** `UPDATE_HERE.md` auto-generato in `manual_update.yml`
+- **#10** Concurrency unificato
+- **#11** `esito_verificato` in `venus_played.json`
+- **#12** Backfill `sestina` concorso 159
+- **#13** Check-time (cron spento)
+- **#14** Doc stale (parziale)
 
-**Contesto:**
-- La sestina era stata originariamente generata da **Venus Vortex** per il concorso 151 del SuperEnalotto (firma `VX-2026-151-938394`).
-- Al SuperEnalotto ha fatto 0 punti.
-- L'utente l'ha giocata anche manualmente al Super Win for Life la stessa sera.
-- Al Super Win for Life ha fatto **4 punti**.
+**Personal stats (ricostruite):**
+- Speso: €40
+- Vinto: €10
+- Bilancio: **-€30**
+- ROI: **-75%**
+- Concorsi completati: 15 (+1 in attesa = 125)
 
-**Problemi:**
-- Nessuno.
+**Track record:**
+- Concorsi tracciati: 15 (con 0 punti per la maggior parte)
+- Hit rate 3+: 0% (atteso: ~1 ogni 100 concorsi)
 
 **Decisioni:**
-- Registrare come "giocata manuale": non è ancora produzione Aurora Engine, ma conferma empirica che il metodo statistico è trasversale.
-- Il metodo "sestine statisticamente indistinguibili dalle estrazioni reali" funziona anche su giochi con 8 estratti.
+- Generatore dichiarato onesto (random + somma 240-310)
+- Bias analysis e regime detection **descrittivi**, non influenzano la generazione
+- Bankroll ricostruito da `vinci_played.json` (niente più dati inventati)
+- SKIP mode severo: EV < -0.55 → nessuna sestina
 
 **Prossimo:**
-- Continuare sviluppo Aurora Engine (Fase 4).
+- Monitorare concorsi 125+
+- Eventuale Fase 6 (core condiviso Aurora + Venus)
 
 ---
 
 ## 2026-09-29 — Estrazione Win for Life concorso 119
 
-**Obiettivo:** Registrare l'estrazione giornaliera per il dataset Aurora.
+**Fatto:**
+- Estrazione 29/09/2026 (Concorso 119): `[9, 26, 35, 42, 54, 57, 70, 72]`
+- Rendita in palio: €14.110/anno per 20 anni
+
+**Nota:** Il concorso 119 era stato inserito con un typo (36 invece di 35), corretto il 2026-10-05.
+
+---
+
+## 2026-09-20 — Prima vincita documentata
+
+- Estrazione 19/09/2026 (Concorso 109): `[5, 8, 17, 34, 48, 65, 80, 89]`
+- Sestina giocata: `[5, 30, 31, 34, 65, 80]`
+- **Punti: 4** (5, 34, 65, 80 centrati)
+- **Vincita: €178,59**
+- **ROI: +8.830%** sulla singola giocata
+
+Sestina originata da Venus Vortex (firma `VX-2026-151-938394`) e giocata manualmente.
+
+---
+
+## 2026-09-20 — Nascita del progetto
+
+**Obiettivo:** Bot Telegram + sistema di analisi quantitativa per Super Win for Life.
 
 **Fatto:**
-- Estrazione Super Win for Life del **29/09/2026** (Concorso **119**)
-- Numeri estratti: `[9, 26, 35, 42, 54, 57, 70, 72]`
-- Rendita in palio: €14.110/anno per 20 anni
-- **Nessuna sestina Aurora generata** (Fase 4 non ancora implementata)
-- **Nessuna giocata utente registrata** per il concorso 119
-
-**Problemi:**
-- Buco nel dataset: concorsi 110→119 mai registrati (10 giorni di estrazioni mancanti)
-- Aurora Engine è fermo al 20/09, esattamente 10 giorni fa
+- Creato repo `aurora-engine` su GitHub
+- Attivato GitHub Pages
+- Configurati GitHub Secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- Creato bot Telegram: `@FrancisauroravinciBot`
+- Definite 5 fasi di sviluppo
 
 **Decisioni:**
-- Cross-check con Venus Vortex: i numeri **26** e **72** sono usciti sia al SuperEnalotto 156 sia al Win for Life 119 lo stesso giorno (29/09). Coincidenza rilevante per analisi future.
-- Priorità assoluta: implementare Fase 4 (bot Telegram) per evitare ulteriori buchi nel dataset.
-
-**Prossimo:**
-- Scrivere `vinci_vita_telegram.py` (Fase 4)
-- Backfill concorsi 110→119 via `fetch_vinci_draw.py`
-- Fase 5 (workflow + PWA)
+- Repo separato da Venus Vortex
+- Fonte dati: AGIMEG (non Sisal)
+- Estrazioni giornaliere → serve cron giornaliero (attualmente disattivato, gestito manualmente)
