@@ -1,33 +1,22 @@
 """
 vinci_vita_portfolio_v3.py
-AURORA ENGINE v5.6 — Generatore pattern-based.
+AURORA ENGINE v5.7 — Generatore pattern-based (approccio costruttivo).
 
-Cambio di paradigma (2026-10-05):
-- Il generatore ora usa i pattern del report (analyze_history.py):
-  - Top 15 caldi (frequenze più alte)
-  - Terzine ricorrenti (>= 2 occorrenze)
-  - Quadruple ricorrenti (>= 2 occorrenze)
-  - Coppie top 10
-  - Parità 4P/2D (configurazione più frequente, 31.2%)
-- Somma comunque vincolata a 240-310.
+Cambio di strategia (2026-10-05 v2):
+- Il generatore precedente tentava di trovare una sestina random che
+  rispettasse tutti i filtri (terzina, coppia, parità, somma, caldi).
+  Con filtri stretti questo richiede milioni di tentativi → run lentissimi.
+- Ora usa approccio COSTRUTTIVO: parte da una terzina ricorrente,
+  aggiunge una coppia top, aggiunge i numeri caldi per arrivare a 6,
+  verifica che somma e parità siano ok.
+- Se una combinazione non funziona, prova la successiva. Spazio di
+  ricerca limitato → risoluzione in meno di 1 secondo.
 
-Pipeline:
-1. Estrae pattern dallo storico (frequenze, terzine, quadruple, coppie)
-2. Costruisce sestine candidate che rispettano:
-   - Somma 240-310
-   - 4 numeri pari / 2 dispari (o 2P/4D)
-   - Almeno 1 coppia top 10
-   - Almeno 1 terzina ricorrente (o quadrupla)
-   - Maggioranza di numeri caldi
-3. Sceglie casualmente (seed deterministico) tra i candidati validi.
+Interfaccia invariata: build_single / build_multiple.
 
-NOTA: matematicamente questo non aumenta P(6). Il generatore resta onesto
-sul fatto che non predice nulla. Ma produce sestine che "sembrano" estratte
-dal pattern reale, come richiesto.
-
-FIX (2026-10-01):
-- Rimosso ogni filtro binario precedente.
-- Mantenuta interfaccia build_single / build_multiple.
+NOTA: matematicamente non aumenta P(6). Il generatore resta onesto
+sul fatto che non predice nulla. Ma produce sestine che rispettano
+i pattern reali (caldi + terzine + quadruple + coppie + parità).
 """
 import random
 import time
@@ -38,15 +27,16 @@ from typing import List, Dict, Optional
 
 SUM_MIN = 240
 SUM_MAX = 310
-DEFAULT_SAMPLES = 50_000
 
-# Configurazione pesi (modificabili)
-TOP_N_HOT = 15              # quanti "caldi" considerare dal report
-MIN_HOT_IN_SESTINA = 3      # minimo numeri caldi in ogni sestina
-PREFERRED_HOT = 4           # numero ideale di caldi
-MIN_TRIPLE_FREQ = 2         # terzine con almeno questa freq
-MIN_QUAD_FREQ = 2           # quadruple con almeno questa freq
-PAIR_FREQ_THRESHOLD = 4     # coppie con almeno questa freq
+# Parametri pattern
+TOP_N_HOT = 15
+MIN_HOT_IN_SESTINA = 3
+MIN_TRIPLE_FREQ = 2
+MIN_QUAD_FREQ = 2
+PAIR_FREQ_THRESHOLD = 4
+
+# Target parità (le due configurazioni più frequenti)
+TARGET_PARITY = [(4, 2), (2, 4)]
 
 
 class AuroraPortfolioV3:
@@ -61,7 +51,6 @@ class AuroraPortfolioV3:
     # ANALISI PATTERN
     # ==========================================
     def _extract_patterns(self):
-        """Estrae pattern dallo storico. Cache per non ricalcolare."""
         if self._patterns is not None:
             return self._patterns
 
@@ -70,11 +59,10 @@ class AuroraPortfolioV3:
             for n in d.get("numeri", []):
                 freq[n] += 1
 
-        # Top caldi
         sorted_hot = sorted(range(1, 91), key=lambda n: freq[n], reverse=True)
         hot_numbers = sorted_hot[:TOP_N_HOT]
+        hot_set = set(hot_numbers)
 
-        # Terzine ricorrenti (>= MIN_TRIPLE_FREQ)
         triple_counter = Counter()
         for d in self.history:
             nums = sorted(d.get("numeri", []))
@@ -82,8 +70,9 @@ class AuroraPortfolioV3:
                 triple_counter[t] += 1
         top_triples = [t for t, c in triple_counter.items()
                        if c >= MIN_TRIPLE_FREQ]
+        # Ordina per frequenza decrescente
+        top_triples.sort(key=lambda t: triple_counter[t], reverse=True)
 
-        # Quadruple ricorrenti (>= MIN_QUAD_FREQ)
         quad_counter = Counter()
         for d in self.history:
             nums = sorted(d.get("numeri", []))
@@ -91,8 +80,8 @@ class AuroraPortfolioV3:
                 quad_counter[q] += 1
         top_quads = [q for q, c in quad_counter.items()
                      if c >= MIN_QUAD_FREQ]
+        top_quads.sort(key=lambda q: quad_counter[q], reverse=True)
 
-        # Coppie top (>= PAIR_FREQ_THRESHOLD)
         pair_counter = Counter()
         for d in self.history:
             nums = sorted(d.get("numeri", []))
@@ -100,82 +89,72 @@ class AuroraPortfolioV3:
                 pair_counter[p] += 1
         top_pairs = [p for p, c in pair_counter.items()
                      if c >= PAIR_FREQ_THRESHOLD]
-
-        # Fallback: se troppo poche coppie, prendi le top 10
         if len(top_pairs) < 10:
             top_pairs = [p for p, _ in pair_counter.most_common(10)]
+        top_pairs.sort(key=lambda p: pair_counter[p], reverse=True)
 
         self._patterns = {
             "freq": dict(freq),
-            "hot_numbers": set(hot_numbers),
+            "hot_numbers": hot_numbers,
+            "hot_set": hot_set,
             "top_triples": top_triples,
             "top_quads": top_quads,
-            "top_pairs": set(top_pairs),
+            "top_pairs": top_pairs,
+            "pair_set": set(top_pairs),
+            "triple_set": set(top_triples),
+            "quad_set": set(top_quads),
         }
         return self._patterns
 
     # ==========================================
     # VALIDAZIONE
     # ==========================================
-    def _validate_candidate(self, combo, patterns) -> bool:
-        """Verifica che una combo rispetti i pattern richiesti."""
+    def _validate(self, combo, patterns) -> bool:
+        if len(set(combo)) != 6:
+            return False
+        if not all(1 <= n <= 90 for n in combo):
+            return False
+
         ssum = sum(combo)
         if not (SUM_MIN <= ssum <= SUM_MAX):
             return False
 
-        # Parità: 4P/2D o 2P/4D (le due config più frequenti con 8 estratti)
         n_pari = sum(1 for x in combo if x % 2 == 0)
         n_dispari = 6 - n_pari
-        if not ((n_pari == 4 and n_dispari == 2) or
-                (n_pari == 2 and n_dispari == 4)):
+        if (n_pari, n_dispari) not in TARGET_PARITY:
             return False
 
-        # Almeno una coppia top
-        has_top_pair = False
-        for p in combinations(combo, 2):
-            if p in patterns["top_pairs"]:
-                has_top_pair = True
-                break
-        if not has_top_pair:
+        # Almeno 1 coppia top
+        has_pair = any(p in patterns["pair_set"]
+                       for p in combinations(combo, 2))
+        if not has_pair:
             return False
 
-        # Almeno una terzina ricorrente o quadrupla
-        has_pattern = False
-        for t in combinations(combo, 3):
-            if t in patterns["top_triples"]:
-                has_pattern = True
-                break
+        # Almeno 1 terzina o quadrupla
+        has_pattern = any(t in patterns["triple_set"]
+                          for t in combinations(combo, 3))
         if not has_pattern:
-            for q in combinations(combo, 4):
-                if q in patterns["top_quads"]:
-                    has_pattern = True
-                    break
+            has_pattern = any(q in patterns["quad_set"]
+                              for q in combinations(combo, 4))
         if not has_pattern:
             return False
 
-        # Minimo numeri caldi
-        hot_count = sum(1 for n in combo if n in patterns["hot_numbers"])
+        # Minimo caldi
+        hot_count = sum(1 for n in combo if n in patterns["hot_set"])
         if hot_count < MIN_HOT_IN_SESTINA:
             return False
 
         return True
 
-    def _score_candidate(self, combo, patterns) -> float:
-        """
-        Punteggio composito: più alto = meglio rispetta i pattern.
-        Usato per ordinare i candidati validi.
-        """
-        hot_count = sum(1 for n in combo if n in patterns["hot_numbers"])
+    def _score(self, combo, patterns) -> float:
+        hot_count = sum(1 for n in combo if n in patterns["hot_set"])
         n_pairs = sum(1 for p in combinations(combo, 2)
-                      if p in patterns["top_pairs"])
+                      if p in patterns["pair_set"])
         n_triples = sum(1 for t in combinations(combo, 3)
-                        if t in patterns["top_triples"])
+                        if t in patterns["triple_set"])
         n_quads = sum(1 for q in combinations(combo, 4)
-                      if q in patterns["top_quads"])
-
-        # Somma più vicina al centro 275 = meglio
+                      if q in patterns["quad_set"])
         sum_score = 1.0 - abs(sum(combo) - 275) / 100.0
-
         return (
             hot_count * 1.0 +
             n_pairs * 0.8 +
@@ -185,63 +164,146 @@ class AuroraPortfolioV3:
         )
 
     # ==========================================
-    # GENERAZIONE
+    # GENERAZIONE COSTRUTTIVA
     # ==========================================
+    def _build_candidates(self, patterns, rng, max_candidates=300):
+        """
+        Costruisce candidati partendo dalle terzine ricorrenti,
+        aggiungendo coppie top e caldi.
+        """
+        candidates = []
+        seen = set()
+
+        # Ordine casuale delle terzine (ma deterministico col seed)
+        triples = list(patterns["top_triples"])
+        rng.shuffle(triples)
+
+        # Anche le quadruple possono essere base
+        quads = list(patterns["top_quads"])
+        rng.shuffle(quads)
+
+        hot = list(patterns["hot_numbers"])
+        pairs = list(patterns["top_pairs"])
+        rng.shuffle(pairs)
+
+        # Base: terzine
+        for triple in triples:
+            base = set(triple)
+            # Prova ad aggiungere una coppia top che non sovrapponga
+            for pair in pairs:
+                pa, pb = pair
+                if pa in base or pb in base:
+                    # La coppia è già parzialmente nella terzina
+                    # Aggiungi solo i mancanti se non supera 6
+                    extra = [n for n in pair if n not in base]
+                    combined = base | set(extra)
+                    if len(combined) > 6:
+                        continue
+                    # Riempi con caldi
+                    for h in hot:
+                        if len(combined) >= 6:
+                            break
+                        combined.add(h)
+                    if len(combined) == 6:
+                        combo = tuple(sorted(combined))
+                        if combo not in seen and self._validate(combo, patterns):
+                            seen.add(combo)
+                            candidates.append(combo)
+                            if len(candidates) >= max_candidates:
+                                return candidates
+                else:
+                    # Coppia esterna: aggiungi entrambi i numeri
+                    combined = base | {pa, pb}
+                    if len(combined) > 6:
+                        continue
+                    # Riempi con caldi
+                    for h in hot:
+                        if len(combined) >= 6:
+                            break
+                        combined.add(h)
+                    if len(combined) == 6:
+                        combo = tuple(sorted(combined))
+                        if combo not in seen and self._validate(combo, patterns):
+                            seen.add(combo)
+                            candidates.append(combo)
+                            if len(candidates) >= max_candidates:
+                                return candidates
+
+        # Base: quadruple (che contengono anche una terzina)
+        for quad in quads:
+            base = set(quad)
+            for h in hot:
+                if len(base) >= 6:
+                    break
+                if h not in base:
+                    base.add(h)
+            # Prova con 1 o 2 caldi
+            for h2 in hot:
+                if len(base) >= 6:
+                    break
+                if h2 not in base:
+                    base.add(h2)
+                    if len(base) == 6:
+                        combo = tuple(sorted(base))
+                        if combo not in seen and self._validate(combo, patterns):
+                            seen.add(combo)
+                            candidates.append(combo)
+                            if len(candidates) >= max_candidates:
+                                return candidates
+                    # Rimuovi per il prossimo tentativo
+                    base.discard(h2)
+
+        return candidates
+
     def build_single(self, pool: List[int], verbose: bool = True,
                      seed: int = None, **kwargs) -> List[Dict]:
-        """
-        Genera UNA sestina che rispetta i pattern.
-        """
-        if len(pool) < 6:
-            return []
-
-        patterns = self._extract_patterns()
-
         if seed is None:
             seed = int(time.time())
         rng = random.Random(seed)
 
+        patterns = self._extract_patterns()
+
         if verbose:
             print(f"[*] Pattern estratti:")
-            print(f"    Top {TOP_N_HOT} caldi: {sorted(patterns['hot_numbers'])}")
+            print(f"    Top {TOP_N_HOT} caldi: {patterns['hot_numbers']}")
             print(f"    Terzine ricorrenti: {len(patterns['top_triples'])}")
             print(f"    Quadruple ricorrenti: {len(patterns['top_quads'])}")
             print(f"    Coppie top: {len(patterns['top_pairs'])}")
 
-        candidates = []
-        attempts = 0
-        max_attempts = DEFAULT_SAMPLES * 20
-
-        while len(candidates) < 200 and attempts < max_attempts:
-            attempts += 1
-            try:
-                combo = tuple(sorted(rng.sample(pool, 6)))
-            except ValueError:
-                break
-            if self._validate_candidate(combo, patterns):
-                score = self._score_candidate(combo, patterns)
-                candidates.append((combo, score))
+        t0 = time.time()
+        candidates = self._build_candidates(patterns, rng, max_candidates=300)
+        elapsed = time.time() - t0
 
         if verbose:
-            print(f"[*] Candidati validi: {len(candidates)} "
-                  f"(in {attempts} tentativi)")
+            print(f"[*] Candidati costruiti: {len(candidates)} "
+                  f"(in {elapsed:.2f}s)")
 
         if not candidates:
             if verbose:
-                print("[!] Nessun candidato valido. Fallback a random+sum.")
+                print("[!] Nessun candidato. Fallback a random+sum.")
             return self._fallback_single(pool, rng, verbose)
 
-        # Ordina per score decrescente, prendi dal top 50
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        top_candidates = candidates[:min(50, len(candidates))]
+        # Ordina per score e scegli random dal top 30
+        scored = [(c, self._score(c, patterns)) for c in candidates]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        top = scored[:min(30, len(scored))]
 
-        chosen, chosen_score = rng.choice(top_candidates)
+        chosen, chosen_score = rng.choice(top)
 
         if verbose:
-            hot_count = sum(1 for n in chosen if n in patterns["hot_numbers"])
-            print(f"[*] Sestina scelta: {list(chosen)} "
-                  f"(somma {sum(chosen)}, caldi {hot_count}/6, "
-                  f"score {chosen_score:.2f})")
+            hot_count = sum(1 for n in chosen if n in patterns["hot_set"])
+            n_pairs = sum(1 for p in combinations(chosen, 2)
+                          if p in patterns["pair_set"])
+            n_triples = sum(1 for t in combinations(chosen, 3)
+                            if t in patterns["triple_set"])
+            n_quads = sum(1 for q in combinations(chosen, 4)
+                          if q in patterns["quad_set"])
+            n_pari = sum(1 for x in chosen if x % 2 == 0)
+            print(f"[*] Sestina scelta: {list(chosen)}")
+            print(f"    Somma {sum(chosen)} · {n_pari}P/{6-n_pari}D")
+            print(f"    Caldi: {hot_count}/6 · Coppie: {n_pairs} · "
+                  f"Terzine: {n_triples} · Quadruple: {n_quads}")
+            print(f"    Score: {chosen_score:.2f}")
 
         return [{
             "profilo": "PATTERN",
@@ -250,7 +312,6 @@ class AuroraPortfolioV3:
         }]
 
     def _fallback_single(self, pool, rng, verbose=False):
-        """Fallback: genera random con solo vincolo somma."""
         for _ in range(50_000):
             try:
                 combo = tuple(sorted(rng.sample(pool, 6)))
@@ -269,9 +330,6 @@ class AuroraPortfolioV3:
     def build_multiple(self, pool: List[int], n: int,
                        verbose: bool = True,
                        base_seed: int = None, **kwargs) -> List[Dict]:
-        """
-        Genera N sestine indipendenti con seed = base_seed + i.
-        """
         results = []
         for i in range(n):
             seed_i = (base_seed + i) if base_seed else None
