@@ -2,6 +2,12 @@
 vinci_vita_engine.py
 AURORA ENGINE v5.5 — Orchestratore semplificato.
 
+FIX (2026-10-05):
+- Aggiunto portfolio_coverage al payload (mancava, index.html lo aspetta).
+- Aggiunto bias_analysis.profile_weights al payload (mancava, index.html lo aspetta).
+  Con questi due campi, la dashboard non mostra più "—" nel footer
+  e nella bias card dopo un run dell'engine.
+
 FIX (2026-10-01):
 - N_SESTINE_DEFAULT = 1 (una sola sestina per concorso).
 - Rimosso ogni accoppiamento con filtri/scoring complessi.
@@ -87,6 +93,24 @@ def _next_draw_info(history):
     else:
         nd = (now + timedelta(days=1)).strftime("%d/%m/%Y")
     return lc, ldate, ld.get("numeri", []), nc, nd
+
+
+def _portfolio_coverage(sestinas_data):
+    """
+    Calcola la copertura del portfolio.
+    - 60% peso: ratio di numeri unici sul totale giocato
+    - 40% peso: ratio di decadi coperte (0-8)
+    Ritorna un valore tra 0.0 e 1.0.
+    """
+    if not sestinas_data:
+        return 0.0
+    all_nums = set()
+    for s in sestinas_data:
+        all_nums.update(s["numeri"])
+    unique_ratio = len(all_nums) / (6 * len(sestinas_data))
+    decades = set((n - 1) // 10 for n in all_nums)
+    decade_ratio = len(decades) / 9.0
+    return round(0.6 * unique_ratio + 0.4 * decade_ratio, 4)
 
 
 def run_engine(rendita=RENDITA_ATTUALE_MENSILE, n_sestine=N_SESTINE_DEFAULT):
@@ -177,6 +201,20 @@ def build_payload(history, sdata, budget, rendita, ev,
     now = datetime.now()
     lc, ldate, ln, nc, nd = _next_draw_info(history)
 
+    # FIX (2026-10-05): portfolio_coverage mancava, ora calcolato
+    coverage = _portfolio_coverage(sdata)
+
+    # FIX (2026-10-05): bias_analysis.profile_weights mancava, ora incluso
+    bias_payload = None
+    if bias_result:
+        bias_payload = {
+            "health": bias_result.get("health"),
+            "chi2": bias_result.get("chi2"),
+            "hot_numbers": bias_result.get("hot_numbers", [])[:5],
+            "cold_numbers": bias_result.get("cold_numbers", [])[:5],
+            "profile_weights": bias_result.get("profile_weights"),
+        }
+
     return {
         "version": DATABASE_VERSION,
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -186,13 +224,9 @@ def build_payload(history, sdata, budget, rendita, ev,
         "n_sestinas": len(sdata),
         "costo_totale": round(len(sdata) * COSTO_GIOCATA_EUR, 2),
         "sestinas": sdata,
+        "portfolio_coverage": coverage,
         "bankroll_state": bankroll_state,
-        "bias_analysis": {
-            "health": bias_result.get("health"),
-            "chi2": bias_result.get("chi2"),
-            "hot_numbers": bias_result.get("hot_numbers", [])[:5],
-            "cold_numbers": bias_result.get("cold_numbers", [])[:5],
-        } if bias_result else None,
+        "bias_analysis": bias_payload,
         "regime_report": regime,
         "ev": {
             "ev_netto": round(ev["ev_netto"], 4),
@@ -209,4 +243,5 @@ if __name__ == "__main__":
         print("\n" + "=" * 70)
         s = payload['sestinas'][0]['numeri'] if payload['sestinas'] else '—'
         print(f"Sestina: {s}")
+        print(f"Coverage: {payload.get('portfolio_coverage', 'N/A')}")
         print("=" * 70)
