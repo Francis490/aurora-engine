@@ -302,6 +302,7 @@
         .sestina-card.profile-C_coverage { border-left-color: var(--aurora-cyan); }
         .sestina-card.profile-UNIFIED_CLUSTER { border-left-color: var(--aurora-cyan); }
         .sestina-card.profile-UNIFIED { border-left-color: var(--aurora-pink); }
+        .sestina-card.profile-SIMPLE { border-left-color: var(--aurora-cyan); }
 
         .sestina-header {
             display: flex;
@@ -324,6 +325,7 @@
         .profile-C_coverage .sestina-profile { color: var(--aurora-cyan); }
         .profile-UNIFIED_CLUSTER .sestina-profile { color: var(--aurora-cyan); }
         .profile-UNIFIED .sestina-profile { color: var(--aurora-pink); }
+        .profile-SIMPLE .sestina-profile { color: var(--aurora-cyan); }
 
         .sestina-ac {
             font-family: 'JetBrains Mono', monospace;
@@ -396,6 +398,17 @@
         }
 
         .bias-body strong { color: var(--text); }
+
+        /* FIX #7: nota descrittiva sotto la bias card */
+        .bias-note {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 0.6rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border-soft);
+            font-style: italic;
+            opacity: 0.8;
+        }
 
         /* FOOTER */
         footer {
@@ -485,6 +498,9 @@
     <div class="bias-card" id="biasCard">
         <div class="bias-title" id="biasTitle">—</div>
         <div class="bias-body" id="biasBody">—</div>
+        <div class="bias-note">
+            ℹ️ Analisi descrittiva: non influenza la generazione delle sestine.
+        </div>
     </div>
 
     <!-- PROSSIMA ESTRAZIONE -->
@@ -632,6 +648,9 @@
         var card = $("biasCard");
         var title = $("biasTitle");
         var body = $("biasBody");
+
+        // FIX #7: aggiorna solo title e body, preserva la nota descrittiva
+        // che è già presente nell'HTML statico.
 
         if (!bias) {
             title.textContent = "🧪 Nessun dato bias disponibile";
