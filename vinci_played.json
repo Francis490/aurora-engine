@@ -440,6 +440,30 @@
           88
         ]
       ],
+      "note": "Aurora Engine v5.5 — 1 sestine",
+      "esito": "1 punto (49)",
+      "punti_per_sestina": [
+        1
+      ],
+      "premio_reale": 0.0,
+      "esito_verificato": true,
+      "esito_verificato_il": "2026-10-08T21:42:25.590577"
+    },
+    {
+      "concorso": 129,
+      "data": "09/10/2026",
+      "giocata_il": "08/10/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          25,
+          26,
+          36,
+          51,
+          54,
+          80
+        ]
+      ],
       "note": "Aurora Engine v5.5 — 1 sestine"
     }
   ]

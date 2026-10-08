@@ -1903,5 +1903,20 @@
       54
     ],
     "url": "manual-update"
+  },
+  {
+    "concorso": 128,
+    "data": "08/10/2026",
+    "numeri": [
+      21,
+      29,
+      49,
+      45,
+      74,
+      22,
+      85,
+      41
+    ],
+    "url": "manual-update"
   }
 ]

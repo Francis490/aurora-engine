@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-08T05:07:05",
-  "rendita_mensile": 14320,
-  "valore_attuale_rendita": 2830692.18,
+  "updated_at": "2026-10-08T21:42:26",
+  "rendita_mensile": 14390,
+  "valore_attuale_rendita": 2844529.36,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -17,18 +17,18 @@
       "id": 1,
       "profilo": "PATTERN_STRICT",
       "numeri": [
-        12,
-        15,
-        18,
-        49,
-        82,
-        88
+        25,
+        26,
+        36,
+        51,
+        54,
+        80
       ],
-      "somma": 264,
-      "score_profilo": 12.95
+      "somma": 272,
+      "score_profilo": 18.48
     }
   ],
-  "portfolio_coverage": 0.7333,
+  "portfolio_coverage": 0.7778,
   "generator_info": {
     "type": "simple_random_sum_filter",
     "description": "Random sampling dal pool 1-90 con filtro somma 240-310.",
@@ -39,22 +39,22 @@
   },
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 71.0,
+    "bankroll": 69.0,
     "peak": 100.0,
-    "drawdown_pct": 29.0,
-    "total_wagered": 44.0,
+    "drawdown_pct": 31.0,
+    "total_wagered": 46.0,
     "total_won": 15.0,
-    "balance": -29.0,
-    "n_plays": 17,
+    "balance": -31.0,
+    "n_plays": 18,
     "n_wins": 3,
-    "win_rate_pct": 17.65,
-    "roi_pct": -65.91,
+    "win_rate_pct": 16.67,
+    "roi_pct": -67.39,
     "is_stopped": true,
-    "stop_until": "2026-10-09T19:43:21.299752"
+    "stop_until": "2026-10-11T05:07:05.349861"
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 72.68,
+    "chi2": 76.57,
     "hot_numbers": [
       49,
       18
@@ -68,29 +68,29 @@
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 127
+    "n": 128
   },
   "ev": {
-    "ev_netto": -1.0102,
-    "ev_percentuale": -50.51
+    "ev_netto": -1.0096,
+    "ev_percentuale": -50.48
   },
   "last_draw": {
-    "concorso": 127,
-    "data": "07/10/2026",
+    "concorso": 128,
+    "data": "08/10/2026",
     "numeri": [
-      20,
-      26,
-      56,
-      89,
-      60,
-      78,
-      25,
-      54
+      21,
+      29,
+      49,
+      45,
+      74,
+      22,
+      85,
+      41
     ]
   },
   "next_draw": {
-    "concorso": 128,
-    "data": "08/10/2026",
+    "concorso": 129,
+    "data": "09/10/2026",
     "ora": "20:00"
   }
 }
