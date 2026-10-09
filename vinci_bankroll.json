@@ -1,6 +1,6 @@
 {
   "initial_bankroll": 100.0,
-  "bankroll": 67.0,
+  "bankroll": 65.0,
   "peak": 100.0,
   "stake_history": [
     {
@@ -116,6 +116,12 @@
       "stake": 2.0,
       "won": 0.0,
       "bankroll_after": 67.0
+    },
+    {
+      "ts": "2026-10-09T20:40:27.306566",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 65.0
     }
   ],
   "win_history": [
@@ -141,12 +147,12 @@
       "note": "Concorso 127"
     }
   ],
-  "total_wagered": 48.0,
+  "total_wagered": 50.0,
   "total_won": 15.0,
-  "n_plays": 19,
+  "n_plays": 20,
   "n_wins": 3,
-  "stop_until": "2026-10-11T21:42:26.059134",
+  "stop_until": "2026-10-12T20:40:27.306570",
   "created_at": "2026-09-29T00:15:02.938377",
-  "updated_at": "2026-10-08T21:42:26.059149",
-  "roi_pct": -68.75
+  "updated_at": "2026-10-09T20:40:27.306590",
+  "roi_pct": -70.0
 }
