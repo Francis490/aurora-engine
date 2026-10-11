@@ -2,9 +2,12 @@
 aurora_manual_update.py
 AURORA ENGINE — Manual update da GitHub Actions form.
 
+FIX (2026-10-11):
+- Aggiunto supporto MANUAL_RENDITA: se fornita, aggiorna vinci_rendita.json.
+  Il resto del bot legge la rendita da lì tramite vinci_vita_math._load_rendita().
+
 FIX (2026-10-05 v2):
-- load_json e save_json ora importati da core_io.py (modulo condiviso
-  tra Aurora e Venus). Vedi CORE_SYNC.md.
+- load_json e save_json ora importati da core_io.py (modulo condiviso).
 
 FIX (2026-09-29):
 - Aggiunto controllo unicità degli 8 numeri
@@ -16,8 +19,8 @@ Legge input da variabili d'ambiente:
 - MANUAL_NUMERI         8 numeri separati da virgola
 - MANUAL_SESTINE        (opzionale) sestine giocate, formato:
                         "16,35,46,51,66,68 | 5,22,30,34,65,84"
+- MANUAL_RENDITA        (opzionale) rendita mensile in euro (es. 14480)
 """
-import json
 import os
 import sys
 import re
@@ -28,6 +31,7 @@ from core_io import load_json, save_json
 
 HISTORY_FILE = "vinci_history.json"
 PLAYED_FILE = "vinci_played.json"
+RENDITA_FILE = "vinci_rendita.json"
 
 
 def parse_numeri(s):
@@ -139,6 +143,30 @@ def update_played(concorso, data, sestine):
     return True
 
 
+def update_rendita(rendita_raw):
+    """Aggiorna vinci_rendita.json se la rendita è fornita e valida."""
+    if not rendita_raw or not rendita_raw.strip():
+        print("[*] Rendita non fornita, lascio invariata.")
+        return
+
+    try:
+        rendita_val = int(rendita_raw.strip())
+    except ValueError:
+        print(f"[!] Rendita non valida: '{rendita_raw}' (ignoro)")
+        return
+
+    if rendita_val < 1000 or rendita_val > 100000:
+        print(f"[!] Rendita fuori range (1000-100000): {rendita_val} (ignoro)")
+        return
+
+    save_json(RENDITA_FILE, {
+        "rendita_mensile": rendita_val,
+        "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "note": "Rendita in palio aggiornata manualmente"
+    })
+    print(f"[+] Rendita aggiornata: €{rendita_val:,}/mese")
+
+
 def main():
     print("=" * 65)
     print("AURORA ENGINE — MANUAL UPDATE")
@@ -148,6 +176,7 @@ def main():
     data = os.environ.get("MANUAL_DATA", "").strip()
     numeri_raw = os.environ.get("MANUAL_NUMERI", "").strip()
     sestine_raw = os.environ.get("MANUAL_SESTINE", "").strip()
+    rendita_raw = os.environ.get("MANUAL_RENDITA", "").strip()
 
     errors = []
 
@@ -184,10 +213,12 @@ def main():
     print(f"[*] Data:          {data}")
     print(f"[*] Numeri:        {numeri}")
     print(f"[*] Sestine:       {sestine if sestine else '(nessuna)'}")
+    print(f"[*] Rendita:       {rendita_raw if rendita_raw else '(non fornita)'}")
     print()
 
     ok1 = update_history(concorso, data, numeri)
     ok2 = update_played(concorso, data, sestine)
+    update_rendita(rendita_raw)
 
     if not ok1:
         sys.exit(1)
