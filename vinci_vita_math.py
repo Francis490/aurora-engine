@@ -2,6 +2,11 @@
 vinci_vita_math.py
 AURORA ENGINE — Modulo matematico Super Win for Life (Vinci per la Vita)
 
+FIX (2026-10-11):
+- RENDITA_ATTUALE_MENSILE ora è caricata dinamicamente da vinci_rendita.json.
+  Se il file non esiste o è corrotto, fallback a 14_470.
+  Aggiornabile dal workflow Manual Update (campo "rendita").
+
 FIX (2026-09-29 v2):
 - EV corretto per condivisione del 6 punti (share factor 0.94)
 - Tabella premi caricata dinamicamente da vinci_premi.json (fallback su default)
@@ -11,7 +16,7 @@ FIX (2026-09-29 v2):
 Matematica del gioco:
 - Probabilità ipergeometriche (8 estratti da 90, 6 giocati)
 - Valore attuale della rendita (annuity, tasso 2%)
-- EV per categoria, corretto per condivisione
+- EV per categoria, corretta per condivisione
 - Kelly criterion
 """
 from math import comb
@@ -29,8 +34,26 @@ NUMERI_GIOCATI = 6
 COSTO_GIOCATA_EUR = 2.00
 PAYOUT_RATIO_DICHIARATO = 0.65
 
-# Rendita
-RENDITA_ATTUALE_MENSILE = 14_470
+# Rendita: caricata dinamicamente da vinci_rendita.json.
+# Fallback hardcoded se il file non esiste o è corrotto.
+RENDITA_FILE = "vinci_rendita.json"
+RENDITA_FALLBACK = 14_470
+
+def _load_rendita():
+    """Legge la rendita mensile da vinci_rendita.json. Fallback: 14_470."""
+    try:
+        if os.path.exists(RENDITA_FILE):
+            with open(RENDITA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            val = int(data.get("rendita_mensile", RENDITA_FALLBACK))
+            if 1000 <= val <= 100000:
+                return val
+    except Exception:
+        pass
+    return RENDITA_FALLBACK
+
+RENDITA_ATTUALE_MENSILE = _load_rendita()
+
 DURATA_RENDITA_ANNI = 20
 MESI_PER_ANNO = 12
 TASSO_SCONTO_ANNUO = 0.02
