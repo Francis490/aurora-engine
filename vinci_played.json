@@ -609,6 +609,40 @@
         ]
       ],
       "note": "Aurora Engine v5.5 — 1 sestine"
+    },
+    {
+      "concorso": 138,
+      "data": "18/10/2026",
+      "giocata_il": "19/10/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          1,
+          9,
+          11,
+          21,
+          31,
+          63
+        ]
+      ],
+      "note": "Manual update — 1 sestine"
+    },
+    {
+      "concorso": 139,
+      "data": "19/10/2026",
+      "giocata_il": "19/10/2026",
+      "costo_eur": 2.0,
+      "sestine": [
+        [
+          29,
+          34,
+          36,
+          49,
+          56,
+          62
+        ]
+      ],
+      "note": "Aurora Engine v5.5 — 1 sestine"
     }
   ]
 }
