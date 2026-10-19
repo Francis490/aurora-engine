@@ -1,8 +1,8 @@
 {
   "version": "5.5",
-  "updated_at": "2026-10-19T09:13:36",
-  "rendita_mensile": 14680,
-  "valore_attuale_rendita": 2901854.83,
+  "updated_at": "2026-10-19T20:54:40",
+  "rendita_mensile": 14710,
+  "valore_attuale_rendita": 2907785.05,
   "budget_mode": {
     "mode": "MINIMO",
     "emoji": "🟢",
@@ -17,15 +17,15 @@
       "id": 1,
       "profilo": "PATTERN_STRICT",
       "numeri": [
-        29,
-        34,
-        36,
-        49,
-        56,
-        62
+        18,
+        23,
+        26,
+        41,
+        54,
+        88
       ],
-      "somma": 266,
-      "score_profilo": 18.45
+      "somma": 250,
+      "score_profilo": 14.38
     }
   ],
   "portfolio_coverage": 0.8222,
@@ -39,25 +39,24 @@
   },
   "bankroll_state": {
     "initial_bankroll": 100.0,
-    "bankroll": 60.0,
+    "bankroll": 58.0,
     "peak": 100.0,
-    "drawdown_pct": 40.0,
-    "total_wagered": 60.0,
+    "drawdown_pct": 42.0,
+    "total_wagered": 62.0,
     "total_won": 20.0,
-    "balance": -40.0,
-    "n_plays": 25,
+    "balance": -42.0,
+    "n_plays": 26,
     "n_wins": 4,
-    "win_rate_pct": 16.0,
-    "roi_pct": -66.67,
-    "is_stopped": false,
-    "stop_until": "2026-10-17T21:15:11.110763"
+    "win_rate_pct": 15.38,
+    "roi_pct": -67.74,
+    "is_stopped": true,
+    "stop_until": "2026-10-22T09:13:36.702868"
   },
   "bias_analysis": {
     "health": "🟢 GIOCO EQUO — Nessun bias sfruttabile",
-    "chi2": 71.71,
+    "chi2": 73.54,
     "hot_numbers": [
-      49,
-      18
+      49
     ],
     "cold_numbers": [],
     "profile_weights": {
@@ -68,29 +67,29 @@
   },
   "regime_report": {
     "health": "🟢 SALUTE OTTIMA — Distribuzione stabile, fingerprint affidabili",
-    "n": 138
+    "n": 139
   },
   "ev": {
-    "ev_netto": -1.0072,
-    "ev_percentuale": -50.36
+    "ev_netto": -1.0069,
+    "ev_percentuale": -50.35
   },
   "last_draw": {
-    "concorso": 138,
-    "data": "18/10/2026",
+    "concorso": 139,
+    "data": "19/10/2026",
     "numeri": [
+      57,
+      90,
+      15,
+      75,
+      49,
       24,
-      27,
-      33,
-      35,
-      38,
-      43,
-      54,
-      75
+      7,
+      70
     ]
   },
   "next_draw": {
-    "concorso": 139,
-    "data": "19/10/2026",
+    "concorso": 140,
+    "data": "20/10/2026",
     "ora": "20:00"
   }
 }

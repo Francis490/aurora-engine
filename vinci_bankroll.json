@@ -1,6 +1,6 @@
 {
   "initial_bankroll": 100.0,
-  "bankroll": 58.0,
+  "bankroll": 56.0,
   "peak": 100.0,
   "stake_history": [
     {
@@ -158,6 +158,12 @@
       "stake": 2.0,
       "won": 0.0,
       "bankroll_after": 58.0
+    },
+    {
+      "ts": "2026-10-19T20:54:40.730877",
+      "stake": 2.0,
+      "won": 0.0,
+      "bankroll_after": 56.0
     }
   ],
   "win_history": [
@@ -190,12 +196,12 @@
       "note": "Concorso 132"
     }
   ],
-  "total_wagered": 62.0,
+  "total_wagered": 64.0,
   "total_won": 20.0,
-  "n_plays": 26,
+  "n_plays": 27,
   "n_wins": 4,
-  "stop_until": "2026-10-22T09:13:36.702868",
+  "stop_until": "2026-10-22T20:54:40.730885",
   "created_at": "2026-09-29T00:15:02.938377",
-  "updated_at": "2026-10-19T09:13:36.702881",
-  "roi_pct": -67.74
+  "updated_at": "2026-10-19T20:54:40.730912",
+  "roi_pct": -68.75
 }
